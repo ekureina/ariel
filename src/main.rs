@@ -4,6 +4,8 @@ use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
+use tracing::error;
+use tracing_subscriber::{EnvFilter, prelude::*};
 
 struct Handler;
 
@@ -17,7 +19,7 @@ impl EventHandler for Handler {
                 .say(&ctx.http, format!("Pong {}!", echo))
                 .await
             {
-                println!("Error sending message: {why:?}");
+                error!("Error sending message: {why:?}");
             }
         }
     }
@@ -29,6 +31,11 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .init();
+
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let intents = GatewayIntents::GUILD_MESSAGES
@@ -41,6 +48,6 @@ async fn main() {
         .expect("Err creating client");
 
     if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
+        error!("Client error: {why:?}");
     }
 }
