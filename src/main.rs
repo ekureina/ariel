@@ -19,7 +19,7 @@ async fn ping(
         ping.map(|text| format!(" {}", text))
             .unwrap_or_else(String::new)
     );
-    ctx.say(response).await?;
+    ctx.reply(response).await?;
     Ok(())
 }
 
