@@ -16,7 +16,7 @@ limitations under the License.
 
 use ariel::{PoiseData, phoenix::song::SongCache};
 use clap::Parser;
-use std::{env, path::Path};
+use std::env;
 
 use poise::serenity_prelude as serenity;
 
@@ -27,13 +27,7 @@ use tracing_subscriber::{EnvFilter, prelude::*};
 struct RankoBotArgs {
     /// The path to load the song cache file from
     #[arg(short, long, default_value = "./song_cache.json")]
-    song_cache_path: String,
-}
-
-impl RankoBotArgs {
-    fn get_song_cache_path(&self) -> &Path {
-        Path::new(&self.song_cache_path)
-    }
+    pub song_cache_path: String,
 }
 
 #[tokio::main]
@@ -64,9 +58,7 @@ async fn main() {
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(PoiseData::new(
-                    SongCache::new(args.get_song_cache_path()).await?,
-                ))
+                Ok(PoiseData::new(SongCache::new(args.song_cache_path).await?))
             })
         })
         .build();
