@@ -37,6 +37,14 @@ pub async fn song(
     Ok(())
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum SongCacheCreationError {
+    #[error("Failed to create because of IO Issue: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Failure to parse json: {0}")]
+    JsonParse(#[from] serde_json::Error),
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SongCache {
     update_time: SystemTime,
@@ -44,10 +52,10 @@ pub struct SongCache {
 }
 
 impl SongCache {
-    pub async fn new(path: impl AsRef<Path> + Clone) -> std::io::Result<Self> {
+    pub async fn new(path: impl AsRef<Path> + Clone) -> Result<Self, SongCacheCreationError> {
         let update_time = tokio::fs::metadata(path.clone()).await?.modified()?;
         let song_data = tokio::fs::read_to_string(path).await?;
-        let data = serde_json::from_str(&song_data).expect("data json");
+        let data = serde_json::from_str(&song_data)?;
         Ok(SongCache { update_time, data })
     }
 }

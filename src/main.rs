@@ -16,7 +16,7 @@ limitations under the License.
 
 use ariel::{PoiseData, phoenix::song::SongCache};
 use clap::Parser;
-use std::{collections::HashMap, env, path::Path};
+use std::{env, path::Path};
 
 use poise::serenity_prelude as serenity;
 
