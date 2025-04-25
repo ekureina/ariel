@@ -21,10 +21,7 @@ use clap::Parser;
 
 use poise::serenity_prelude as serenity;
 
-use tokio::{
-    io::{AsyncBufReadExt, BufReader},
-    task::JoinSet,
-};
+use tokio::task::JoinSet;
 use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, clap::Parser)]
