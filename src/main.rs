@@ -23,7 +23,6 @@ use tokio::{
     io::{AsyncBufReadExt, BufReader},
     task::JoinSet,
 };
-use tracing::{Instrument, error};
 use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, clap::Parser)]
