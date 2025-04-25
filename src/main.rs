@@ -57,18 +57,18 @@ async fn main() {
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![
-                ranko_bot::ping(),
-                ranko_bot::register(),
-                ranko_bot::phoenix::song::song(),
+                ariel::ping(),
+                ariel::register(),
+                ariel::phoenix::song::song(),
             ],
-            on_error: |error| Box::pin(ranko_bot::on_error(error)),
+            on_error: |error| Box::pin(ariel::on_error(error)),
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(ranko_bot::PoiseData {
-                    song_cache: ranko_bot::phoenix::song::SongCache(song_data),
+                Ok(ariel::PoiseData {
+                    song_cache: ariel::phoenix::song::SongCache(song_data),
                 })
             })
         })
