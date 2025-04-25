@@ -19,7 +19,11 @@ use clap::Parser;
 
 use poise::serenity_prelude as serenity;
 
-use tracing::error;
+use tokio::{
+    io::{AsyncBufReadExt, BufReader},
+    task::JoinSet,
+};
+use tracing::{Instrument, error};
 use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, clap::Parser)]
@@ -68,7 +72,25 @@ async fn main() {
         .await
         .expect("Err creating client");
 
-    if let Err(why) = client.start().await {
-        error!("Client error: {why:?}");
-    }
+    let mut join_set = JoinSet::new();
+    // Run the actual client
+    join_set.spawn(async move { client.start().await });
+    // Provide a means of stopping the bot without sending a kill signal
+    join_set.spawn(async move {
+        let mut terminal_in = BufReader::new(tokio::io::stdin());
+        loop {
+            let mut line = String::new();
+            terminal_in.read_line(&mut line).await?;
+            if line.trim().starts_with("exit") {
+                break;
+            }
+        }
+        Ok(())
+    });
+    join_set
+        .join_next()
+        .await
+        .expect("Failed to join set")
+        .expect("Failed to join set")
+        .expect("Failed bot");
 }
