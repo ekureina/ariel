@@ -26,7 +26,9 @@ type PoiseContext<'a> = poise::Context<'a, PoiseData, PoiseError>;
 #[poise::command(prefix_command)]
 pub async fn ping(
     ctx: PoiseContext<'_>,
-    #[description = "Echo Text"] ping: Option<String>,
+    #[description = "Echo Text"]
+    #[rest]
+    ping: Option<String>,
 ) -> Result<(), PoiseError> {
     let response = format!(
         "Pong{}!",
@@ -42,4 +44,12 @@ pub async fn ping(
 pub async fn register(ctx: PoiseContext<'_>) -> Result<(), PoiseError> {
     poise::builtins::register_application_commands_buttons(ctx).await?;
     Ok(())
+}
+
+pub(crate) trait Ao3Url {
+    fn get_url(&self) -> Option<String>;
+}
+
+pub async fn on_error(error: poise::FrameworkError<'_, PoiseData, PoiseError>) {
+    tracing::error!("Error: {:}", error);
 }

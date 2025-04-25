@@ -36,7 +36,12 @@ async fn main() {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![ranko_bot::ping(), ranko_bot::register()],
+            commands: vec![
+                ranko_bot::ping(),
+                ranko_bot::register(),
+                ranko_bot::phoenix::song::song(),
+            ],
+            on_error: |error| Box::pin(ranko_bot::on_error(error)),
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
