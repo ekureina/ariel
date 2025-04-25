@@ -54,7 +54,7 @@ async fn main() {
                 ariel::register(),
                 ariel::phoenix::song::song(),
             ],
-            on_error: |error| Box::pin(ariel::on_error(error)),
+            on_error: |error| Box::pin(async move { ariel::on_error(&error) }),
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {

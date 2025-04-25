@@ -15,3 +15,12 @@ tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread", "io-std"]
 tracing = "0.1.41"
 tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+[lints.rust]
+nonstandard_style = "deny"
+deprecated_in_future = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+pedantic = "warn"
