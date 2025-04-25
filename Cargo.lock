@@ -99,6 +99,7 @@ dependencies = [
  "poise",
  "serde",
  "serde_json",
+ "shlex",
  "thiserror 2.0.12",
  "tokio",
  "tracing",

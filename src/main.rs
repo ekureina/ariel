@@ -79,17 +79,7 @@ async fn main() {
     // Run the actual client
     join_set.spawn(async move { client.start().await });
     // Provide a means of stopping the bot without sending a kill signal
-    join_set.spawn(async move {
-        let mut terminal_in = BufReader::new(tokio::io::stdin());
-        loop {
-            let mut line = String::new();
-            terminal_in.read_line(&mut line).await?;
-            if line.trim().starts_with("exit") {
-                break;
-            }
-        }
-        Ok(())
-    });
+    join_set.spawn(ariel::run_commands());
     join_set
         .join_next()
         .await
