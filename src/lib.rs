@@ -36,7 +36,7 @@ pub async fn ping(
     let response = format!(
         "Pong{}!",
         ping.map(|text| format!(" {}", text))
-            .unwrap_or_else(String::new)
+            .unwrap_or_default()
     );
     ctx.reply(response).await?;
     Ok(())

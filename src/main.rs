@@ -31,7 +31,7 @@ struct RankoBotArgs {
 
 impl RankoBotArgs {
     fn get_song_cache_path(&self) -> &Path {
-        &Path::new(&self.song_cache_path)
+        Path::new(&self.song_cache_path)
     }
 }
 
