@@ -1,3 +1,4 @@
+use phoenix::song::SongCache;
 
 /*
 Copyright 2025 ekureina
@@ -17,9 +18,15 @@ limitations under the License.
 pub mod phoenix;
 
 /// Data held by the bot over its lifetime
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PoiseData {
-    pub song_cache: crate::phoenix::song::SongCache,
+    song_cache: SongCache,
+}
+
+impl PoiseData {
+    pub fn new(song_cache: SongCache) -> Self {
+        PoiseData { song_cache }
+    }
 }
 
 type PoiseError = Box<dyn std::error::Error + Send + Sync>;
@@ -35,8 +42,7 @@ pub async fn ping(
 ) -> Result<(), PoiseError> {
     let response = format!(
         "Pong{}!",
-        ping.map(|text| format!(" {}", text))
-            .unwrap_or_default()
+        ping.map(|text| format!(" {}", text)).unwrap_or_default()
     );
     ctx.reply(response).await?;
     Ok(())

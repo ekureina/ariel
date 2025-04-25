@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use ariel::{PoiseData, phoenix::song::SongCache};
 use clap::Parser;
 use std::{collections::HashMap, env, path::Path};
 
@@ -43,10 +44,6 @@ async fn main() {
         .init();
 
     let args = RankoBotArgs::parse();
-    let song_data: HashMap<String, String> = serde_json::from_str(
-        &std::fs::read_to_string(args.get_song_cache_path()).expect("Song Cache not Readable"),
-    )
-    .expect("Song Cache not Json");
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
@@ -67,9 +64,9 @@ async fn main() {
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(ariel::PoiseData {
-                    song_cache: ariel::phoenix::song::SongCache(song_data),
-                })
+                Ok(PoiseData::new(
+                    SongCache::new(args.get_song_cache_path()).await?,
+                ))
             })
         })
         .build();

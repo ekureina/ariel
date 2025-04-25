@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path, time::SystemTime};
 
 /// Generates a link to the given Phoenix Saga Song
 #[poise::command(prefix_command, slash_command)]
@@ -23,7 +23,12 @@ pub async fn song(
     #[description = "Song to link to"] song: Option<String>,
 ) -> Result<(), crate::PoiseError> {
     let url = match song {
-        Some(ref song) => ctx.data().song_cache.0.get(&song.to_lowercase()).cloned(),
+        Some(ref song) => ctx
+            .data()
+            .song_cache
+            .data
+            .get(&song.to_lowercase())
+            .cloned(),
         None => Some(String::from("https://archiveofourown.org/series/3790873")),
     };
     if let Some(url) = url {
@@ -32,5 +37,17 @@ pub async fn song(
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct SongCache(pub HashMap<String, String>);
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SongCache {
+    update_time: SystemTime,
+    data: HashMap<String, String>,
+}
+
+impl SongCache {
+    pub async fn new(path: impl AsRef<Path> + Clone) -> std::io::Result<Self> {
+        let update_time = tokio::fs::metadata(path.clone()).await?.modified()?;
+        let song_data = tokio::fs::read_to_string(path).await?;
+        let data = serde_json::from_str(&song_data).expect("data json");
+        Ok(SongCache { update_time, data })
+    }
+}
