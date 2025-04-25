@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use std::sync::{Arc, Mutex};
+
 use ariel::{PoiseData, phoenix::song::SongCache};
 use clap::Parser;
 
@@ -26,7 +28,7 @@ use tokio::{
 use tracing_subscriber::{EnvFilter, prelude::*};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, clap::Parser)]
-struct RankoBotArgs {
+struct ArielArgs {
     /// The path to load the song cache file from
     #[arg(short, long, default_value = "./song_cache.json")]
     pub song_cache_path: String,
@@ -42,7 +44,7 @@ async fn main() {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let args = RankoBotArgs::parse();
+    let args = ArielArgs::parse();
 
     let intents = serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::DIRECT_MESSAGES
@@ -61,7 +63,9 @@ async fn main() {
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(PoiseData::new(SongCache::new(args.song_cache_path).await?))
+                Ok(Arc::new(Mutex::new(PoiseData::new(
+                    SongCache::new(args.song_cache_path).await?,
+                ))))
             })
         })
         .build();

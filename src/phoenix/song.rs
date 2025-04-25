@@ -28,6 +28,8 @@ pub async fn song(
     let url = match song {
         Some(ref song) => ctx
             .data()
+            .lock()
+            .expect("Mutex not poisoned")
             .song_cache
             .data
             .get(&song.to_lowercase())

@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use phoenix::song::SongCache;
 use tracing::{info, instrument};
 
@@ -31,7 +33,7 @@ impl PoiseData {
 }
 
 type PoiseError = Box<dyn std::error::Error + Send + Sync>;
-type PoiseContext<'a> = poise::Context<'a, PoiseData, PoiseError>;
+type PoiseContext<'a> = poise::Context<'a, Arc<Mutex<PoiseData>>, PoiseError>;
 
 /// Ping Ariel, and optionally echo the arguments
 #[poise::command(prefix_command)]
@@ -60,6 +62,6 @@ pub async fn register(ctx: PoiseContext<'_>) -> Result<(), PoiseError> {
     Ok(())
 }
 
-pub async fn on_error(error: poise::FrameworkError<'_, PoiseData, PoiseError>) {
+pub async fn on_error(error: poise::FrameworkError<'_, Arc<Mutex<PoiseData>>, PoiseError>) {
     tracing::error!("Error: {:}", error);
 }
