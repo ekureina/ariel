@@ -1,4 +1,5 @@
 use phoenix::song::SongCache;
+use tracing::{info, instrument};
 
 /*
 Copyright 2025 ekureina
@@ -32,8 +33,9 @@ impl PoiseData {
 type PoiseError = Box<dyn std::error::Error + Send + Sync>;
 type PoiseContext<'a> = poise::Context<'a, PoiseData, PoiseError>;
 
-/// Ping RankoBot, and optionally echo the arguments
+/// Ping Ariel, and optionally echo the arguments
 #[poise::command(prefix_command)]
+#[instrument]
 pub async fn ping(
     ctx: PoiseContext<'_>,
     #[description = "Echo Text"]
@@ -42,15 +44,18 @@ pub async fn ping(
 ) -> Result<(), PoiseError> {
     let response = format!(
         "Pong{}!",
-        ping.map(|text| format!(" {}", text)).unwrap_or_default()
+        ping.map(|text| format!(" {text}")).unwrap_or_default()
     );
+    info!("Pinged Ariel, response: {response}");
     ctx.reply(response).await?;
     Ok(())
 }
 
-/// Register RankoBot's slash commands
+/// Register Ariel's slash commands
 #[poise::command(prefix_command)]
+#[instrument]
 pub async fn register(ctx: PoiseContext<'_>) -> Result<(), PoiseError> {
+    info!("Registering slash commands");
     poise::builtins::register_application_commands_buttons(ctx).await?;
     Ok(())
 }

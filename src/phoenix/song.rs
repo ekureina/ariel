@@ -16,8 +16,11 @@ limitations under the License.
 
 use std::{collections::HashMap, path::Path, time::SystemTime};
 
+use tracing::{info, instrument};
+
 /// Generates a link to the given Phoenix Saga Song
 #[poise::command(prefix_command, slash_command)]
+#[instrument]
 pub async fn song(
     ctx: crate::PoiseContext<'_>,
     #[description = "Song to link to"] song: Option<String>,
@@ -31,6 +34,7 @@ pub async fn song(
             .cloned(),
         None => Some(String::from("https://archiveofourown.org/series/3790873")),
     };
+    info!("Song url: {url:?}");
     if let Some(url) = url {
         ctx.reply(url).await?;
     }
@@ -52,10 +56,14 @@ pub struct SongCache {
 }
 
 impl SongCache {
-    pub async fn new(path: impl AsRef<Path> + Clone) -> Result<Self, SongCacheCreationError> {
+    #[instrument]
+    pub async fn new(
+        path: impl AsRef<Path> + Clone + std::fmt::Debug,
+    ) -> Result<Self, SongCacheCreationError> {
         let update_time = tokio::fs::metadata(path.clone()).await?.modified()?;
         let song_data = tokio::fs::read_to_string(path).await?;
         let data = serde_json::from_str(&song_data)?;
+        info!("Creating song cache updated {update_time:?}: {data:?}");
         Ok(SongCache { update_time, data })
     }
 }
