@@ -14,12 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::env;
+use clap::Parser;
+use std::{collections::HashMap, env, path::Path};
 
 use poise::serenity_prelude as serenity;
 
 use tracing::error;
 use tracing_subscriber::{EnvFilter, prelude::*};
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, clap::Parser)]
+struct RankoBotArgs {
+    /// The path to load the song cache file from
+    #[arg(short, long, default_value = "./song_cache.json")]
+    song_cache_path: String,
+}
+
+impl RankoBotArgs {
+    fn get_song_cache_path(&self) -> &Path {
+        &Path::new(&self.song_cache_path)
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -27,6 +41,12 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .with(EnvFilter::from_default_env())
         .init();
+
+    let args = RankoBotArgs::parse();
+    let song_data: HashMap<String, String> = serde_json::from_str(
+        &std::fs::read_to_string(args.get_song_cache_path()).expect("Song Cache not Readable"),
+    )
+    .expect("Song Cache not Json");
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
@@ -47,7 +67,9 @@ async fn main() {
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(ranko_bot::PoiseData::default())
+                Ok(ranko_bot::PoiseData {
+                    song_cache: ranko_bot::phoenix::song::SongCache(song_data),
+                })
             })
         })
         .build();

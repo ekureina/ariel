@@ -1,3 +1,4 @@
+
 /*
 Copyright 2025 ekureina
 
@@ -16,8 +17,10 @@ limitations under the License.
 pub mod phoenix;
 
 /// Data held by the bot over its lifetime
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
-pub struct PoiseData {}
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct PoiseData {
+    pub song_cache: crate::phoenix::song::SongCache,
+}
 
 type PoiseError = Box<dyn std::error::Error + Send + Sync>;
 type PoiseContext<'a> = poise::Context<'a, PoiseData, PoiseError>;
@@ -44,10 +47,6 @@ pub async fn ping(
 pub async fn register(ctx: PoiseContext<'_>) -> Result<(), PoiseError> {
     poise::builtins::register_application_commands_buttons(ctx).await?;
     Ok(())
-}
-
-pub(crate) trait Ao3Url {
-    fn get_url(&self) -> Option<String>;
 }
 
 pub async fn on_error(error: poise::FrameworkError<'_, PoiseData, PoiseError>) {

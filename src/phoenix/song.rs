@@ -14,54 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use poise::ChoiceParameter;
-
-use crate::Ao3Url;
+use std::collections::HashMap;
 
 /// Generates a link to the given Phoenix Saga Song
 #[poise::command(prefix_command, slash_command)]
 pub async fn song(
     ctx: crate::PoiseContext<'_>,
-    #[description = "Song to link to"] song: Option<Song>,
+    #[description = "Song to link to"] song: Option<String>,
 ) -> Result<(), crate::PoiseError> {
-    if let Some(url) = song.get_url() {
+    let url = match song {
+        Some(ref song) => ctx.data().song_cache.0.get(&song.to_lowercase()).cloned(),
+        None => Some(String::from("https://archiveofourown.org/series/3790873")),
+    };
+    if let Some(url) = url {
         ctx.reply(url).await?;
     }
     Ok(())
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, poise::ChoiceParameter)]
-pub(crate) enum Song {
-    Rise,
-    Sneak,
-    #[name = "Call Me Pandora"]
-    CallMePandora,
-}
-
-impl std::str::FromStr for Song {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Song::from_name(s).ok_or(())
-    }
-}
-
-impl Ao3Url for Song {
-    fn get_url(&self) -> Option<String> {
-        match self {
-            Self::Rise => Some(String::from("https://archiveofourown.org/works/50928391")),
-            Self::Sneak => Some(String::from("https://archiveofourown.org/works/50928661")),
-            Self::CallMePandora => Some(String::from("https://archiveofourown.org/works/51412897")),
-            _ => None,
-        }
-    }
-}
-
-impl Ao3Url for Option<Song> {
-    fn get_url(&self) -> Option<String> {
-        match self {
-            Some(song) => song.get_url(),
-            None => Some(String::from("https://archiveofourown.org/series/3790873")),
-        }
-    }
-}
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SongCache(pub HashMap<String, String>);
