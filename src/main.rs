@@ -16,7 +16,6 @@ limitations under the License.
 
 use ariel::{PoiseData, phoenix::song::SongCache};
 use clap::Parser;
-use std::env;
 
 use poise::serenity_prelude as serenity;
 
@@ -28,6 +27,9 @@ struct RankoBotArgs {
     /// The path to load the song cache file from
     #[arg(short, long, default_value = "./song_cache.json")]
     pub song_cache_path: String,
+    /// The discord token to use to connect to Discord
+    #[arg(short, long, env)]
+    pub discord_token: String,
 }
 
 #[tokio::main]
@@ -38,8 +40,6 @@ async fn main() {
         .init();
 
     let args = RankoBotArgs::parse();
-
-    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let intents = serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::DIRECT_MESSAGES
@@ -63,7 +63,7 @@ async fn main() {
         })
         .build();
 
-    let mut client = serenity::Client::builder(&token, intents)
+    let mut client = serenity::Client::builder(&args.discord_token, intents)
         .framework(framework)
         .await
         .expect("Err creating client");
