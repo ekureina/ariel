@@ -118,8 +118,6 @@ async fn main() {
     let mut join_set = JoinSet::new();
     // Run the actual client
     join_set.spawn(async move { client.start().await });
-    // Provide a means of stopping the bot without sending a kill signal
-    join_set.spawn(ariel::repl::run_commands());
     song_watcher
         .watch(
             args.get_song_cache_path()
@@ -128,6 +126,8 @@ async fn main() {
             notify::RecursiveMode::NonRecursive,
         )
         .expect("File Watcher Can't watch");
+    // Provide a means of stopping the bot without sending a kill signal
+    join_set.spawn(ariel::repl::run_commands(song_watcher));
     join_set.spawn(update_song_cache(
         rx,
         data,
