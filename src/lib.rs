@@ -21,11 +21,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 pub mod phoenix;
+pub mod tasks;
 
 /// Data held by the bot over its lifetime
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PoiseData {
-    song_cache: SongCache,
+    pub song_cache: SongCache,
 }
 
 impl PoiseData {

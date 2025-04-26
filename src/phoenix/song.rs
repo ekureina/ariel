@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::{collections::HashMap, path::Path, time::SystemTime};
+use std::{collections::HashMap, path::Path};
 
 use tracing::{info, instrument};
 
@@ -53,7 +53,6 @@ pub enum SongCacheCreationError {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SongCache {
-    update_time: SystemTime,
     data: HashMap<String, String>,
 }
 
@@ -62,10 +61,9 @@ impl SongCache {
     pub async fn new(
         path: impl AsRef<Path> + Clone + std::fmt::Debug,
     ) -> Result<Self, SongCacheCreationError> {
-        let update_time = tokio::fs::metadata(path.clone()).await?.modified()?;
         let song_data = tokio::fs::read_to_string(path).await?;
         let data = serde_json::from_str(&song_data)?;
-        info!("Creating song cache updated {update_time:?}: {data:?}");
-        Ok(SongCache { update_time, data })
+        info!("Creating song cache updated: {data:?}");
+        Ok(SongCache { data })
     }
 }
