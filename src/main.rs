@@ -119,7 +119,7 @@ async fn main() {
     // Run the actual client
     join_set.spawn(async move { client.start().await });
     // Provide a means of stopping the bot without sending a kill signal
-    join_set.spawn(ariel::run_commands());
+    join_set.spawn(ariel::repl::run_commands());
     song_watcher
         .watch(
             args.get_song_cache_path()
