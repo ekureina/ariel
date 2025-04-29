@@ -42,6 +42,10 @@ struct ArielArgs {
     /// Defaults to one hour
     #[arg(short, long, default_value_t = 36_000)]
     pub file_watcher_poll_ms: u64,
+    /// The URL to the connected SQL Database.
+    /// MSQL and SQLite are both supported
+    #[arg(long, default_value = "sqlite::memory:")]
+    pub sql_url: String,
 }
 
 impl ArielArgs {
@@ -69,7 +73,19 @@ async fn main() {
         .with(EnvFilter::from_default_env())
         .init();
 
+    sqlx::any::install_default_drivers();
+
     let args = ArielArgs::parse();
+
+    let db_pool = sqlx::any::AnyPoolOptions::new()
+        .connect(&args.sql_url)
+        .await
+        .expect("Able to connect to database");
+
+    sqlx::migrate!()
+        .run(&db_pool)
+        .await
+        .expect("Unable to run DB migrations");
 
     let intents = serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::DIRECT_MESSAGES
