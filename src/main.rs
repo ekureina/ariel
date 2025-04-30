@@ -21,12 +21,14 @@ use std::{
     time::Duration,
 };
 
-use ariel::{PoiseData, phoenix::song::SongCache, tasks::update_song_cache};
+use ariel::{PoiseData, migrator::Migrator, phoenix::song::SongCache, tasks::update_song_cache};
 use clap::Parser;
 
 use notify::{PollWatcher, Watcher};
 use poise::serenity_prelude as serenity;
 
+use sea_orm::Database;
+use sea_orm_migration::MigratorTrait;
 use tokio::task::JoinSet;
 use tracing_subscriber::{EnvFilter, prelude::*};
 
@@ -43,7 +45,7 @@ struct ArielArgs {
     #[arg(short, long, default_value_t = 36_000)]
     pub file_watcher_poll_ms: u64,
     /// The URL to the connected SQL Database.
-    /// MSQL and SQLite are both supported
+    /// MSQL, POSTGRES, and SQLite are all supported
     #[arg(long, default_value = "sqlite::memory:")]
     pub sql_url: String,
 }
@@ -73,19 +75,37 @@ async fn main() {
         .with(EnvFilter::from_default_env())
         .init();
 
-    sqlx::any::install_default_drivers();
-
     let args = ArielArgs::parse();
+    let db = Arc::new(
+        Database::connect(&args.sql_url)
+            .await
+            .expect("Unable to connect to database"),
+    );
 
-    let db_pool = sqlx::any::AnyPoolOptions::new()
-        .connect(&args.sql_url)
+    // Run only unapplied migrations
+    Migrator::install(&*db)
         .await
-        .expect("Able to connect to database");
-
-    sqlx::migrate!()
-        .run(&db_pool)
+        .expect("Failed to setup migration table");
+    let unapplied_count = Migrator::get_pending_migrations(&*db)
         .await
-        .expect("Unable to run DB migrations");
+        .expect("Unable to get pending migration count")
+        .len();
+    match Migrator::up(&*db, None).await {
+        Ok(()) => {}
+        Err(err) => {
+            Migrator::down(
+                &*db,
+                Some(
+                    unapplied_count
+                        .try_into()
+                        .expect("Too many unapplied migrations"),
+                ),
+            )
+            .await
+            .expect("Failed to run DB Migration rollbacks");
+            panic!("Unable to run migrations, rolled back: {err}")
+        }
+    }
 
     let intents = serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::DIRECT_MESSAGES
