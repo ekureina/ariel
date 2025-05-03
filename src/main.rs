@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use ariel::{PoiseData, migrator::Migrator};
 use clap::Parser;
 
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, RoleId};
 
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
@@ -35,6 +35,15 @@ struct ArielArgs {
     /// MSQL, POSTGRES, and `SQLite` are all supported
     #[arg(long, default_value = "sqlite::memory:")]
     pub sql_url: String,
+    /// The Role Id of a special Guild Role with Admin Permissions
+    #[arg(short, long, env)]
+    admin_role_id: u64,
+}
+
+impl ArielArgs {
+    pub fn get_ariel_admin_group_id(&self) -> RoleId {
+        RoleId::new(self.admin_role_id)
+    }
 }
 
 #[tokio::main]
@@ -79,9 +88,8 @@ async fn main() {
     let intents = serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::DIRECT_MESSAGES
         | serenity::GatewayIntents::MESSAGE_CONTENT;
-    let data = Arc::new(Mutex::new(PoiseData::default()));
+    let data = PoiseData::new(args.get_ariel_admin_group_id());
 
-    let framework_data = data.clone();
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![ariel::ping(), ariel::register()],
@@ -91,7 +99,7 @@ async fn main() {
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(framework_data)
+                Ok(data)
             })
         })
         .build();
