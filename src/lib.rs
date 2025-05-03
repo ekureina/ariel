@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use phoenix::song::SongCache;
 use tracing::{error, info, instrument};
 
 /*
@@ -25,17 +24,8 @@ pub mod repl;
 pub mod tasks;
 
 /// Data held by the bot over its lifetime
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PoiseData {
-    pub song_cache: SongCache,
-}
-
-impl PoiseData {
-    #[must_use]
-    pub fn new(song_cache: SongCache) -> Self {
-        PoiseData { song_cache }
-    }
-}
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub struct PoiseData {}
 
 type PoiseError = Box<dyn std::error::Error + Send + Sync>;
 type PoiseContext<'a> = poise::Context<'a, Arc<Mutex<PoiseData>>, PoiseError>;
