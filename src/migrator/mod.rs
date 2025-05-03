@@ -1,16 +1,12 @@
 use sea_orm_migration::prelude::*;
 
-mod m20250429_000001_create_ao3_urls_table;
-mod m20250429_000002_create_songs_table;
+mod m_20250502_000001_initial;
 
 pub struct Migrator;
 
 #[async_trait::async_trait]
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![
-            Box::new(m20250429_000001_create_ao3_urls_table::Migration),
-            Box::new(m20250429_000002_create_songs_table::Migration),
-        ]
+        vec![Box::new(m_20250502_000001_initial::Migration)]
     }
 }
