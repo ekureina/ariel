@@ -43,9 +43,14 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(FicPlatforms::Name).string_len(50).not_null())
-                    // Store u64s as Strings, since SQLite can't store u64 (only i64)
-                    .col(ColumnDef::new(FicPlatforms::Emoji).string_len(20).null())
+                    .col(
+                        ColumnDef::new(FicPlatforms::Name)
+                            .string_len(50)
+                            .not_null()
+                            .unique_key(),
+                    )
+                    // Name of the Emoji
+                    .col(ColumnDef::new(FicPlatforms::Emoji).string_len(30).null())
                     .to_owned(),
             )
             .await?;
@@ -142,23 +147,23 @@ impl Migration {
                     .into_table(FicPlatforms::Table)
                     .columns([FicPlatforms::Name, FicPlatforms::Emoji])
                     .values_from_panic(vec![
-                        ["Archive of Our Own".into(), "1296476973668892703".into()],
-                        ["Fanfiction.net".into(), "1283179505489281044".into()],
-                        ["FicWad".into(), "1339416463940784229".into()],
-                        ["FimFiction".into(), "1313255639639920710".into()],
-                        ["Inkitt".into(), "1283179560250245264".into()],
+                        ["Archive of Our Own".into(), "ao3".into()],
+                        ["Fanfiction.net".into(), "ffn".into()],
+                        ["FicWad".into(), "ficwad".into()],
+                        ["FimFiction".into(), "fimfiction".into()],
+                        ["Inkitt".into(), "inkitt".into()],
                         ["itch.io".into(), None::<String>.into()],
-                        ["MediaMiner".into(), "1283179560250245264".into()],
-                        ["Neobook".into(), "1339416509117890570".into()],
-                        ["Questionable Questing".into(), "1299530574020481094".into()],
-                        ["QuoteV".into(), "1283179707747274783".into()],
-                        ["Royal Road".into(), "1283179759387279392".into()],
-                        ["Scribble Hub".into(), "1283179775481090180".into()],
-                        ["SpaceBattles".into(), "1339416627120177314".into()],
-                        ["Sufficient Velocity".into(), "1289331369364684842".into()],
-                        ["Tapas".into(), "1339416640567246858".into()],
-                        ["Wattpad".into(), "1339416666978779197".into()],
-                        ["Webnovel".into(), "1339416666978779197".into()],
+                        ["MediaMiner".into(), "mediaminer".into()],
+                        ["Neobook".into(), "neobook".into()],
+                        ["Questionable Questing".into(), "qq".into()],
+                        ["QuoteV".into(), "quotev".into()],
+                        ["Royal Road".into(), "rr".into()],
+                        ["Scribble Hub".into(), "scribblehub".into()],
+                        ["Spacebattles".into(), "spacebattles".into()],
+                        ["Sufficient Velocity".into(), "sv".into()],
+                        ["Tapas".into(), "tapas".into()],
+                        ["Wattpad".into(), "wattpad".into()],
+                        ["WebNovel".into(), "webnovel".into()],
                     ])
                     .to_owned(),
             )
