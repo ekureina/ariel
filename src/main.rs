@@ -88,11 +88,15 @@ async fn main() {
     let intents = serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::DIRECT_MESSAGES
         | serenity::GatewayIntents::MESSAGE_CONTENT;
-    let data = PoiseData::new(args.get_ariel_admin_group_id());
+    let data = PoiseData::new(args.get_ariel_admin_group_id(), Arc::clone(&db));
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![ariel::ping(), ariel::register()],
+            commands: vec![
+                ariel::ping(),
+                ariel::register(),
+                ariel::phoenix::random_song(),
+            ],
             on_error: |error| Box::pin(async move { ariel::on_error(&error) }),
             ..Default::default()
         })

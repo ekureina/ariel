@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use poise::serenity_prelude::RoleId;
+use sea_orm::DatabaseConnection;
 use tracing::{error, info, instrument};
 
 /*
@@ -23,15 +26,22 @@ pub mod repl;
 pub mod tasks;
 
 /// Data held by the bot over its lifetime
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct PoiseData {
     pub(crate) admin_role_id: RoleId,
+    pub(crate) database_connection: Arc<DatabaseConnection>,
 }
 
 impl PoiseData {
     #[must_use]
-    pub fn new(admin_role_id: RoleId) -> Self {
-        PoiseData { admin_role_id }
+    pub fn new(
+        admin_role_id: RoleId,
+        database_connection: impl Into<Arc<DatabaseConnection>>,
+    ) -> Self {
+        PoiseData {
+            admin_role_id,
+            database_connection: database_connection.into(),
+        }
     }
 }
 
