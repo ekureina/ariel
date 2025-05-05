@@ -1,10 +1,14 @@
 # Ariel
 
 A Discord bot started so I could dip my toes in Bot development,
-providing links to The Phoenix Saga fanfic links.
+built for the Storyteller's Speakeasy Server.
 
-Named after Ranko's sound tech from said Saga. May include other
-utility commands and such.
+It currently includes a list of fics and Phoenix Saga Song Lyrics,
+with commands to retrieve links to both across a host of platforms.
+
+Ariel is designed to run on a single server per instance.
+
+Named after Ranko's sound tech from The Phoenix Saga.
 
 ## Compiling
 
