@@ -24,6 +24,55 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+/// Command to grab a link to a specified `The Phoenx Saga` Song, for the specified platform
+#[poise::command(prefix_command, slash_command)]
+#[instrument(skip(ctx))]
+pub async fn song(
+    ctx: PoiseContext<'_>,
+    #[description = "Name of the song to link to"] name: String,
+    #[description = "Name of the platform to link to"] platform: String,
+) -> Result<(), PoiseError> {
+    let db = &*ctx.data().database_connection;
+    if let Some((platform_id, platform_emoji)) =
+        sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db).await?
+    {
+        let fic = Fics::find()
+            .filter(fics::Column::PlatformId.eq(platform_id))
+            .filter(fics::Column::Title.eq(&name))
+            .one(db)
+            .await?;
+        let emoji = match platform_emoji {
+            Some(emoji_name) => ctx
+                .partial_guild()
+                .await
+                .map(|partial_guild| partial_guild.emojis)
+                .and_then(|emojis| {
+                    emojis
+                        .values()
+                        .find(|emoji| emoji.name == emoji_name)
+                        .map(Emoji::to_string)
+                }),
+            None => None,
+        };
+        let emoji_header = emoji.map(|emoji| format!("{emoji}: ")).unwrap_or_default();
+        match fic {
+            Some(fic) => {
+                info!("Found fic: {fic:?}");
+                ctx.reply(emoji_header + &fic.url).await?;
+            }
+            None => {
+                ctx.reply(emoji_header + "No songs called " + &name + " exist!")
+                    .await?;
+            }
+        }
+    } else {
+        ctx.reply("Unknown Fic Platform, could not not find song")
+            .await?;
+    }
+    Ok(())
+}
+
 /// Command to grab a random Song, that appears before a given point in `The Phoenix Saga`
 #[poise::command(prefix_command, slash_command)]
 #[instrument(skip(ctx))]
