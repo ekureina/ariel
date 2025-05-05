@@ -20,6 +20,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 pub mod entities;
+pub mod fic_commands;
 pub mod migrator;
 pub mod phoenix;
 pub mod repl;
@@ -97,6 +98,7 @@ pub(crate) async fn is_admin(ctx: PoiseContext<'_>) -> Result<bool, PoiseError> 
         .is_some_and(|member| member.roles.contains(&ctx.data().admin_role_id)))
 }
 
+#[allow(clippy::unused_async)]
 pub(crate) async fn is_phoenix_author(ctx: PoiseContext<'_>) -> Result<bool, PoiseError> {
     info!("Checking if user is the Phoenix Author");
     Ok(ctx.author().id == ctx.data().phoenix_author_id)

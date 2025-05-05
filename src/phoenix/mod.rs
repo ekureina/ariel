@@ -30,8 +30,8 @@ limitations under the License.
 #[instrument(skip(ctx))]
 pub async fn add_song(
     ctx: PoiseContext<'_>,
-    #[description = "Name of the Song to add"] name: String,
-    #[description = "Name of the Platform to add"] platform: String,
+    #[description = "Name of the song to add"] title: String,
+    #[description = "Name of the platform to add to"] platform: String,
     #[description = "Song's URL"] url: String,
     #[description = "Phoenix Book"] phoenix_book: i32,
     #[description = "Phoenix Chapter"] phoenix_chapter: i32,
@@ -42,11 +42,9 @@ pub async fn add_song(
         .await
         .map_err(|err| err.to_string())?
         .ok_or("Unable to find Fic Platform")?;
-    let user = sql::get_user(phoenix_saga_user_id, db)
-        .await
-        .map_err(|err| err.to_string())?;
+    let user = sql::get_user(phoenix_saga_user_id, db).await?;
     let new_fic = sql::insert_fic_if_not_exists(
-        &name,
+        &title,
         platform_id,
         user.id,
         url,
@@ -54,9 +52,10 @@ pub async fn add_song(
         phoenix_chapter,
         db,
     )
-    .await
-    .map_err(|err| err.to_string())?;
-    info!("Found fic: {new_fic:?}");
+    .await?;
+    info!("Created song: {new_fic:?}");
+    ctx.reply(String::from("Added song ") + &title + " for " + &platform)
+        .await?;
     Ok(())
 }
 
