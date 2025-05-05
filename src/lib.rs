@@ -58,7 +58,7 @@ pub async fn ping(
     #[rest]
     ping: Option<String>,
 ) -> Result<(), PoiseError> {
-    let is_admin_tag = if is_admin(&ctx).await {
+    let is_admin_tag = if is_admin(&ctx).await.unwrap_or_default() {
         String::from("from admin")
     } else {
         String::from("from regular user")
@@ -86,14 +86,10 @@ pub fn on_error(error: &poise::FrameworkError<'_, PoiseData, PoiseError>) {
     error!("Error: {:}", error);
 }
 
-pub(crate) async fn is_admin(ctx: &PoiseContext<'_>) -> bool {
+pub(crate) async fn is_admin(ctx: &PoiseContext<'_>) -> Result<bool, PoiseError> {
     info!("Checking Admin permissions");
-    return if let Some(guild_id) = ctx.guild_id() {
-        ctx.author()
-            .has_role(ctx, guild_id, ctx.data().admin_role_id)
-            .await
-            .unwrap_or_default()
-    } else {
-        false
-    };
+    Ok(ctx
+        .author_member()
+        .await
+        .is_some_and(|member| member.roles.contains(&ctx.data().admin_role_id)))
 }
