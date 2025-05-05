@@ -5,7 +5,8 @@ use tracing::{info, instrument};
 
 use crate::{
     PoiseContext, PoiseError,
-    entities::{fic_platforms, fics, prelude::*},
+    entities::{fics, prelude::*},
+    sql,
 };
 
 /*
@@ -41,11 +42,8 @@ pub async fn random_song(
     let max_chapter = max_chapter_number.unwrap_or(i32::MAX);
     let platform = fic_platform.unwrap_or(String::from("Archive of Our Own"));
 
-    if let Some((platform_id, platform_emoji)) = FicPlatforms::find()
-        .filter(fic_platforms::Column::Name.eq(platform))
-        .one(db)
-        .await?
-        .map(|platform| (platform.id, platform.emoji))
+    if let Some((platform_id, platform_emoji)) =
+        sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db).await?
     {
         // Grab all fics we could consider
         let valid_fics = Fics::find()

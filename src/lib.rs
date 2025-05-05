@@ -23,6 +23,7 @@ pub mod entities;
 pub mod migrator;
 pub mod phoenix;
 pub mod repl;
+pub mod sql;
 pub mod tasks;
 
 /// Data held by the bot over its lifetime

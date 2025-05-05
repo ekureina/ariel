@@ -38,6 +38,9 @@ struct ArielArgs {
     /// The Role Id of a special Guild Role with Admin Permissions
     #[arg(short, long, env)]
     admin_role_id: u64,
+    /// The Discord User Id of the Author of The Phoenix Saga
+    #[arg(long, env)]
+    pub phoenix_saga_user_id: u64,
 }
 
 impl ArielArgs {
@@ -117,7 +120,7 @@ async fn main() {
     // Run the actual client
     join_set.spawn(async move { client.start().await });
     // Provide a means of stopping the bot without sending a kill signal
-    join_set.spawn(ariel::repl::run_commands());
+    join_set.spawn(ariel::repl::run_commands(db, args.phoenix_saga_user_id));
     join_set
         .join_next()
         .await
