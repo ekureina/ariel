@@ -19,7 +19,7 @@ use std::sync::Arc;
 use ariel::{PoiseData, migrator::Migrator};
 use clap::Parser;
 
-use poise::serenity_prelude::{self as serenity, RoleId};
+use poise::serenity_prelude::{self as serenity, RoleId, UserId};
 
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
@@ -46,6 +46,10 @@ struct ArielArgs {
 impl ArielArgs {
     pub fn get_ariel_admin_group_id(&self) -> RoleId {
         RoleId::new(self.admin_role_id)
+    }
+
+    pub fn get_phoenix_author_id(&self) -> UserId {
+        UserId::new(self.phoenix_saga_user_id)
     }
 }
 
@@ -91,7 +95,11 @@ async fn main() {
     let intents = serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::DIRECT_MESSAGES
         | serenity::GatewayIntents::MESSAGE_CONTENT;
-    let data = PoiseData::new(args.get_ariel_admin_group_id(), Arc::clone(&db));
+    let data = PoiseData::new(
+        args.get_phoenix_author_id(),
+        args.get_ariel_admin_group_id(),
+        Arc::clone(&db),
+    );
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {

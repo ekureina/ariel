@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use poise::serenity_prelude::RoleId;
+use poise::serenity_prelude::{RoleId, UserId};
 use sea_orm::DatabaseConnection;
 use tracing::{error, info, instrument};
 
@@ -29,6 +29,7 @@ pub mod tasks;
 /// Data held by the bot over its lifetime
 #[derive(Debug, Clone)]
 pub struct PoiseData {
+    pub(crate) phoenix_author_id: UserId,
     pub(crate) admin_role_id: RoleId,
     pub(crate) database_connection: Arc<DatabaseConnection>,
 }
@@ -36,10 +37,12 @@ pub struct PoiseData {
 impl PoiseData {
     #[must_use]
     pub fn new(
+        phoenix_author_id: UserId,
         admin_role_id: RoleId,
         database_connection: impl Into<Arc<DatabaseConnection>>,
     ) -> Self {
         PoiseData {
+            phoenix_author_id,
             admin_role_id,
             database_connection: database_connection.into(),
         }
@@ -92,4 +95,9 @@ pub(crate) async fn is_admin(ctx: &PoiseContext<'_>) -> Result<bool, PoiseError>
         .author_member()
         .await
         .is_some_and(|member| member.roles.contains(&ctx.data().admin_role_id)))
+}
+
+pub(crate) async fn is_phoenix_author(ctx: &PoiseContext<'_>) -> Result<bool, PoiseError> {
+    info!("Checking if user is the Phoenix Author");
+    Ok(ctx.author().id == ctx.data().phoenix_author_id)
 }
