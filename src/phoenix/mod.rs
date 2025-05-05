@@ -65,9 +65,10 @@ pub async fn add_song(
 pub async fn song(
     ctx: PoiseContext<'_>,
     #[description = "Name of the song to link to"] name: String,
-    #[description = "Name of the platform to link to"] platform: String,
+    #[description = "Name of the platform to link to, defaults to AO3"] platform: Option<String>,
 ) -> Result<(), PoiseError> {
     let db = &*ctx.data().database_connection;
+    let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
     if let Some((platform_id, platform_emoji)) =
         sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db).await?
     {
