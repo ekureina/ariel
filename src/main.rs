@@ -108,6 +108,7 @@ async fn main() {
                 ariel::register(),
                 ariel::phoenix::random_song(),
                 ariel::phoenix::song(),
+                ariel::phoenix::add_song(),
             ],
             on_error: |error| Box::pin(async move { ariel::on_error(&error) }),
             ..Default::default()

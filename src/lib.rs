@@ -61,7 +61,7 @@ pub async fn ping(
     #[rest]
     ping: Option<String>,
 ) -> Result<(), PoiseError> {
-    let is_admin_tag = if is_admin(&ctx).await.unwrap_or_default() {
+    let is_admin_tag = if is_admin(ctx).await.unwrap_or_default() {
         String::from("from admin")
     } else {
         String::from("from regular user")
@@ -89,7 +89,7 @@ pub fn on_error(error: &poise::FrameworkError<'_, PoiseData, PoiseError>) {
     error!("Error: {:}", error);
 }
 
-pub(crate) async fn is_admin(ctx: &PoiseContext<'_>) -> Result<bool, PoiseError> {
+pub(crate) async fn is_admin(ctx: PoiseContext<'_>) -> Result<bool, PoiseError> {
     info!("Checking Admin permissions");
     Ok(ctx
         .author_member()
@@ -97,7 +97,7 @@ pub(crate) async fn is_admin(ctx: &PoiseContext<'_>) -> Result<bool, PoiseError>
         .is_some_and(|member| member.roles.contains(&ctx.data().admin_role_id)))
 }
 
-pub(crate) async fn is_phoenix_author(ctx: &PoiseContext<'_>) -> Result<bool, PoiseError> {
+pub(crate) async fn is_phoenix_author(ctx: PoiseContext<'_>) -> Result<bool, PoiseError> {
     info!("Checking if user is the Phoenix Author");
     Ok(ctx.author().id == ctx.data().phoenix_author_id)
 }

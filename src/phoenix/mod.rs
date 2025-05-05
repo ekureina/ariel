@@ -25,6 +25,41 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/// Adds a song for the given platform
+#[poise::command(prefix_command, slash_command, check = "crate::is_phoenix_author")]
+#[instrument(skip(ctx))]
+pub async fn add_song(
+    ctx: PoiseContext<'_>,
+    #[description = "Name of the Song to add"] name: String,
+    #[description = "Name of the Platform to add"] platform: String,
+    #[description = "Song's URL"] url: String,
+    #[description = "Phoenix Book"] phoenix_book: i32,
+    #[description = "Phoenix Chapter"] phoenix_chapter: i32,
+) -> Result<(), PoiseError> {
+    let db = &ctx.data().database_connection;
+    let phoenix_saga_user_id = ctx.data().phoenix_author_id.get();
+    let (platform_id, _) = sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db)
+        .await
+        .map_err(|err| err.to_string())?
+        .ok_or("Unable to find Fic Platform")?;
+    let user = sql::get_user(phoenix_saga_user_id, db)
+        .await
+        .map_err(|err| err.to_string())?;
+    let new_fic = sql::insert_fic_if_not_exists(
+        &name,
+        platform_id,
+        user.id,
+        url,
+        phoenix_book,
+        phoenix_chapter,
+        db,
+    )
+    .await
+    .map_err(|err| err.to_string())?;
+    info!("Found fic: {new_fic:?}");
+    Ok(())
+}
+
 /// Command to grab a link to a specified `The Phoenx Saga` Song, for the specified platform
 #[poise::command(prefix_command, slash_command)]
 #[instrument(skip(ctx))]
