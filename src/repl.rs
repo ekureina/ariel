@@ -97,6 +97,7 @@ async fn run_command(
                 url,
                 phoenix_book,
                 phoenix_chapter,
+                vec![String::from("Original Work"), String::from("Ranma 1/2")],
                 db,
             )
             .await

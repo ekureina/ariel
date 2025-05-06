@@ -32,6 +32,8 @@ pub async fn add_fic(
     #[autocomplete = "crate::sql::get_platform_autocomplete"]
     platform: Option<String>,
     #[description = "URL to the fic"] url: String,
+    #[description = "Fandoms associated to the fic, defaults to \"Ranma 1/2\". For Crossovers, separate by commas."]
+    fandoms: Option<String>,
 ) -> Result<(), PoiseError> {
     let db = &ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
@@ -40,8 +42,16 @@ pub async fn add_fic(
         .map_err(|err| err.to_string())?
         .ok_or("Unable to find Fic Platform")?;
     let user = sql::get_user(ctx.author().id.get(), db).await?;
+    let fandoms = match fandoms {
+        None => vec![String::from("Ranma 1/2")],
+        Some(fandoms) => fandoms
+            .split(",")
+            .map(|fandom| fandom.trim().to_owned())
+            .collect(),
+    };
     let new_fic =
-        sql::insert_fic_if_not_exists(&title, platform_id, user.id, url, None, None, db).await?;
+        sql::insert_fic_if_not_exists(&title, platform_id, user.id, url, None, None, fandoms, db)
+            .await?;
     info!("Created fic: {new_fic:?}");
     ctx.reply(String::from("Added fic ") + &title + " for " + &platform)
         .await?;

@@ -16,11 +16,15 @@ limitations under the License.
 
 use std::collections::HashMap;
 
-use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
+use poise::serenity_prelude::FutureExt;
+use sea_orm::{
+    ActiveValue, ColumnTrait, ConnectionTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
+    TransactionTrait,
+};
 
 use crate::{
     PoiseContext,
-    entities::{fic_platforms, fics, prelude::*, users},
+    entities::{fandoms, fic_platforms, fics, fics_fandoms, prelude::*, users},
 };
 
 /// Helper method to translate a platform name into an id and emoji
@@ -68,6 +72,7 @@ pub(crate) async fn insert_fic_if_not_exists(
     url: String,
     phoenix_book: impl Into<Option<i32>>,
     phoenix_chapter: impl Into<Option<i32>>,
+    fandoms: Vec<String>,
     db: &DatabaseConnection,
 ) -> Result<fics::Model, DbErr> {
     if let Some(fic) = Fics::find()
@@ -88,7 +93,65 @@ pub(crate) async fn insert_fic_if_not_exists(
             ..Default::default()
         };
 
-        Fics::insert(model).exec_with_returning(db).await
+        let transaction = db.begin().await?;
+
+        let fic = match Fics::insert(model).exec_with_returning(&transaction).await {
+            Ok(fic) => fic,
+            Err(err) => {
+                transaction.rollback().await?;
+                return Err(err);
+            }
+        };
+
+        let mut database_fandoms = vec![];
+        for fandom in fandoms {
+            match get_or_create_fandom(&fandom, &transaction).await {
+                Ok(fandom) => database_fandoms.push(fics_fandoms::ActiveModel {
+                    fic_id: ActiveValue::Set(fic.id),
+                    fandom_id: ActiveValue::Set(fandom.id),
+                    ..Default::default()
+                }),
+                Err(err) => {
+                    transaction.rollback().await?;
+                    return Err(err);
+                }
+            }
+        }
+
+        match FicsFandoms::insert_many(database_fandoms)
+            .exec(&transaction)
+            .await
+        {
+            Ok(_) => {}
+            Err(err) => {
+                transaction.rollback().await?;
+                return Err(err);
+            }
+        }
+
+        transaction.commit().await?;
+
+        Ok(fic)
+    }
+}
+
+/// Gets the specified fandom, creating if necessary
+pub(crate) async fn get_or_create_fandom<C: ConnectionTrait>(
+    fandom: &str,
+    db: &C,
+) -> Result<fandoms::Model, DbErr> {
+    if let Some(fandom) = Fandoms::find()
+        .filter(fandoms::Column::Name.eq(fandom))
+        .one(db)
+        .await?
+    {
+        Ok(fandom)
+    } else {
+        let model = fandoms::ActiveModel {
+            name: ActiveValue::Set(fandom.to_owned()),
+            ..Default::default()
+        };
+        Fandoms::insert(model).exec_with_returning(db).await
     }
 }
 
