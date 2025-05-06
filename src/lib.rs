@@ -87,7 +87,7 @@ pub async fn register(ctx: PoiseContext<'_>) -> Result<(), PoiseError> {
 }
 
 pub fn on_error(error: &poise::FrameworkError<'_, PoiseData, PoiseError>) {
-    error!("Error: {:}", error);
+    error!("Error: {}", error);
 }
 
 pub(crate) async fn is_admin(ctx: PoiseContext<'_>) -> Result<bool, PoiseError> {

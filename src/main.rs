@@ -111,6 +111,7 @@ async fn main() {
                 ariel::phoenix::add_song(),
                 ariel::fic_commands::add_fic(),
                 ariel::fic_commands::fic(),
+                ariel::fic_commands::random_fic(),
             ],
             on_error: |error| Box::pin(async move { ariel::on_error(&error) }),
             ..Default::default()

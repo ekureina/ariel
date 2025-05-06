@@ -16,10 +16,9 @@ limitations under the License.
 
 use std::collections::HashMap;
 
-use itertools::Itertools;
 use sea_orm::{
     ActiveValue, ColumnTrait, ConnectionTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
-    QuerySelect, TransactionTrait,
+    TransactionTrait,
 };
 
 use crate::{
@@ -110,7 +109,6 @@ pub(crate) async fn insert_fic_if_not_exists(
                 Ok(fandom) => database_fandoms.push(fics_fandoms::ActiveModel {
                     fic_id: ActiveValue::Set(fic.id),
                     fandom_id: ActiveValue::Set(fandom.id),
-                    ..Default::default()
                 }),
                 Err(err) => {
                     transaction.rollback().await?;

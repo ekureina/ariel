@@ -1,4 +1,5 @@
 use poise::serenity_prelude::Emoji;
+use rand::seq::IndexedRandom;
 /*
 Copyright 2025 ekureina
 
@@ -18,7 +19,7 @@ use tracing::{info, instrument};
 
 use crate::{
     PoiseContext, PoiseError,
-    entities::{fics, prelude::*},
+    entities::{fandoms, fics, prelude::*},
     sql,
 };
 use sea_orm::{EntityTrait, QueryFilter, prelude::*};
@@ -111,6 +112,68 @@ pub async fn fic(
     } else {
         ctx.reply("Unknown Fic Platform, could not not find fic")
             .await?;
+    }
+    Ok(())
+}
+
+/// Command to get a random fic from the given fandoms
+#[poise::command(prefix_command, slash_command)]
+#[instrument(skip(ctx))]
+pub async fn random_fic(
+    ctx: PoiseContext<'_>,
+    #[description = "Fandom of fic, if any. Will include crossovers into this fandom. Default will search all fandoms."]
+    #[autocomplete = "crate::sql::get_fandom_autocomplete"]
+    fandom: Option<String>,
+    #[description = "Name of the platform to link to, defaults to AO3"]
+    #[autocomplete = "crate::sql::get_platform_autocomplete"]
+    platform: Option<String>,
+) -> Result<(), PoiseError> {
+    let db = &*ctx.data().database_connection;
+    let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
+    let (platform_id, platform_emoji) =
+        sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db)
+            .await
+            .map_err(|err| err.to_string())?
+            .ok_or("Unable to find Fic Platform")?;
+
+    let fandom_filter = match fandom {
+        Some(fandom) => fandoms::Column::Name.eq(fandom),
+        None => fandoms::Column::Name.is_not_null(),
+    };
+    let emoji = match platform_emoji {
+        Some(emoji_name) => ctx
+            .partial_guild()
+            .await
+            .map(|partial_guild| partial_guild.emojis)
+            .and_then(|emojis| {
+                emojis
+                    .values()
+                    .find(|emoji| emoji.name == emoji_name)
+                    .map(Emoji::to_string)
+            }),
+        None => None,
+    };
+    let emoji_header = emoji.map(|emoji| format!("{emoji}: ")).unwrap_or_default();
+
+    let fics = Fics::find()
+        .find_also_related(Fandoms)
+        .filter(fics::Column::PlatformId.eq(platform_id))
+        .filter(fics::Column::PhoenixSongBook.is_null())
+        .filter(fics::Column::PhoenixSongChapter.is_null())
+        .filter(fandom_filter)
+        .all(db)
+        .await
+        .unwrap_or_default();
+    if fics.is_empty() {
+        ctx.reply(emoji_header + "No songs meet that criteria!")
+            .await?;
+    } else {
+        let picked_fic = {
+            let mut rng = rand::rng();
+            fics.choose(&mut rng)
+        };
+        info!("Picked fic: {picked_fic:?}");
+        ctx.reply(emoji_header + &picked_fic.unwrap().0.url).await?;
     }
     Ok(())
 }
