@@ -26,6 +26,8 @@ pub enum Relation {
         on_delete = "NoAction"
     )]
     FicPlatforms,
+    #[sea_orm(has_many = "super::fics_fandoms::Entity")]
+    FicsFandoms,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::AuthorUserId",
@@ -42,9 +44,24 @@ impl Related<super::fic_platforms::Entity> for Entity {
     }
 }
 
+impl Related<super::fics_fandoms::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::FicsFandoms.def()
+    }
+}
+
 impl Related<super::users::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Users.def()
+    }
+}
+
+impl Related<super::fandoms::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::fics_fandoms::Relation::Fandoms.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::fics_fandoms::Relation::Fics.def().rev())
     }
 }
 
