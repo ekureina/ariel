@@ -14,9 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use std::collections::HashMap;
+
 use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
-use crate::entities::{fic_platforms, fics, prelude::*, users};
+use crate::{
+    PoiseContext,
+    entities::{fic_platforms, fics, prelude::*, users},
+};
 
 /// Helper method to translate a platform name into an id and emoji
 pub(crate) async fn get_fic_platform_id_and_emoji_name_from_name(
@@ -85,4 +90,93 @@ pub(crate) async fn insert_fic_if_not_exists(
 
         Fics::insert(model).exec_with_returning(db).await
     }
+}
+
+/// Autocompletes the list of platforms ariel knows about
+pub(crate) async fn get_platform_autocomplete(
+    poise_ctx: PoiseContext<'_>,
+    partial: &str,
+) -> Vec<String> {
+    let db = &*poise_ctx.data().database_connection;
+    FicPlatforms::find()
+        .filter(fic_platforms::Column::Name.starts_with(partial))
+        .all(db)
+        .await
+        .map(|platforms| {
+            platforms
+                .iter()
+                .map(|platform| platform.name.clone())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Autocompletes the list of fics ariel knows about
+pub(crate) async fn get_fic_autocomplete(
+    poise_ctx: PoiseContext<'_>,
+    partial: &str,
+) -> impl Iterator<Item = poise::serenity_prelude::AutocompleteChoice> {
+    let db = &*poise_ctx.data().database_connection;
+    let fics_with_platforms = Fics::find()
+        .find_also_related(FicPlatforms)
+        .filter(fics::Column::Title.starts_with(partial))
+        .filter(fics::Column::PhoenixSongBook.is_null())
+        .filter(fics::Column::PhoenixSongChapter.is_null())
+        .all(db)
+        .await
+        .unwrap_or_default();
+
+    let mut fics_to_platforms =
+        HashMap::<String, Vec<String>, _>::with_capacity(fics_with_platforms.len());
+
+    for (fic, platform) in fics_with_platforms {
+        if let Some(platform) = platform {
+            fics_to_platforms
+                .entry(fic.title)
+                .and_modify(|platforms| platforms.push(platform.name.clone()))
+                .or_insert_with(|| vec![platform.name]);
+        }
+    }
+
+    fics_to_platforms.into_iter().map(|(fic, platforms)| {
+        poise::serenity_prelude::AutocompleteChoice::new(
+            format!("{fic} ({})", platforms.join(", ")),
+            fic,
+        )
+    })
+}
+
+/// Autocompletes the list of songs ariel knows about
+pub(crate) async fn get_song_autocomplete(
+    poise_ctx: PoiseContext<'_>,
+    partial: &str,
+) -> impl Iterator<Item = poise::serenity_prelude::AutocompleteChoice> {
+    let db = &*poise_ctx.data().database_connection;
+    let fics_with_platforms = Fics::find()
+        .find_also_related(FicPlatforms)
+        .filter(fics::Column::Title.starts_with(partial))
+        .filter(fics::Column::PhoenixSongBook.is_not_null())
+        .filter(fics::Column::PhoenixSongChapter.is_not_null())
+        .all(db)
+        .await
+        .unwrap_or_default();
+
+    let mut fics_to_platforms =
+        HashMap::<String, Vec<String>, _>::with_capacity(fics_with_platforms.len());
+
+    for (fic, platform) in fics_with_platforms {
+        if let Some(platform) = platform {
+            fics_to_platforms
+                .entry(fic.title)
+                .and_modify(|platforms| platforms.push(platform.name.clone()))
+                .or_insert_with(|| vec![platform.name]);
+        }
+    }
+
+    fics_to_platforms.into_iter().map(|(fic, platforms)| {
+        poise::serenity_prelude::AutocompleteChoice::new(
+            format!("{fic} ({})", platforms.join(", ")),
+            fic,
+        )
+    })
 }

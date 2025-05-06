@@ -31,7 +31,9 @@ limitations under the License.
 pub async fn add_song(
     ctx: PoiseContext<'_>,
     #[description = "Name of the song to add"] title: String,
-    #[description = "Name of the platform to add to"] platform: String,
+    #[description = "Name of the platform to add to"]
+    #[autocomplete = "crate::sql::get_platform_autocomplete"]
+    platform: String,
     #[description = "Song's URL"] url: String,
     #[description = "Phoenix Book"] phoenix_book: i32,
     #[description = "Phoenix Chapter"] phoenix_chapter: i32,
@@ -64,8 +66,12 @@ pub async fn add_song(
 #[instrument(skip(ctx))]
 pub async fn song(
     ctx: PoiseContext<'_>,
-    #[description = "Name of the song to link to"] name: String,
-    #[description = "Name of the platform to link to, defaults to AO3"] platform: Option<String>,
+    #[description = "Name of the song to link to"]
+    #[autocomplete = "crate::sql::get_song_autocomplete"]
+    title: String,
+    #[description = "Name of the platform to link to, defaults to AO3"]
+    #[autocomplete = "crate::sql::get_platform_autocomplete"]
+    platform: Option<String>,
 ) -> Result<(), PoiseError> {
     let db = &*ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
@@ -74,7 +80,7 @@ pub async fn song(
     {
         let fic = Fics::find()
             .filter(fics::Column::PlatformId.eq(platform_id))
-            .filter(fics::Column::Title.eq(&name))
+            .filter(fics::Column::Title.eq(&title))
             .one(db)
             .await?;
         let emoji = match platform_emoji {
@@ -97,7 +103,7 @@ pub async fn song(
                 ctx.reply(emoji_header + &fic.url).await?;
             }
             None => {
-                ctx.reply(emoji_header + "No songs called " + &name + " exist!")
+                ctx.reply(emoji_header + "No songs called " + &title + " exist!")
                     .await?;
             }
         }
@@ -118,7 +124,9 @@ pub async fn random_song(
     >,
     #[description = "Maximum Phoenix Chapter Number in book, defaults to end of book"]
     max_chapter_number: Option<i32>,
-    #[description = "Fic Platform to use, defaults to AO3"] fic_platform: Option<String>,
+    #[description = "Fic Platform to use, defaults to AO3"]
+    #[autocomplete = "crate::sql::get_platform_autocomplete"]
+    fic_platform: Option<String>,
 ) -> Result<(), PoiseError> {
     // pull out the relevant data
     let db = &*ctx.data().database_connection;

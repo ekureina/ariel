@@ -28,7 +28,9 @@ use sea_orm::{EntityTrait, QueryFilter, prelude::*};
 pub async fn add_fic(
     ctx: PoiseContext<'_>,
     #[description = "Name of the pic to add"] title: String,
-    #[description = "Name of the platform to add to, defaults to AO3"] platform: Option<String>,
+    #[description = "Name of the platform to add to, defaults to AO3"]
+    #[autocomplete = "crate::sql::get_platform_autocomplete"]
+    platform: Option<String>,
     #[description = "URL to the fic"] url: String,
 ) -> Result<(), PoiseError> {
     let db = &ctx.data().database_connection;
@@ -51,8 +53,12 @@ pub async fn add_fic(
 #[instrument(skip(ctx))]
 pub async fn fic(
     ctx: PoiseContext<'_>,
-    #[description = "Name of the fic to link to"] name: String,
-    #[description = "Name of the platform to link to, defaults to AO3"] platform: Option<String>,
+    #[description = "Name of the fic to link to"]
+    #[autocomplete = "crate::sql::get_fic_autocomplete"]
+    name: String,
+    #[description = "Name of the platform to link to, defaults to AO3"]
+    #[autocomplete = "crate::sql::get_platform_autocomplete"]
+    platform: Option<String>,
 ) -> Result<(), PoiseError> {
     let db = &*ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
