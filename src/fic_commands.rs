@@ -33,6 +33,7 @@ pub async fn add_fic(
     platform: Option<String>,
     #[description = "URL to the fic"] url: String,
     #[description = "Fandoms associated to the fic, defaults to \"Ranma 1/2\". For Crossovers, separate by commas."]
+    #[autocomplete = "crate::sql::get_fandom_autocomplete"]
     fandoms: Option<String>,
 ) -> Result<(), PoiseError> {
     let db = &ctx.data().database_connection;
@@ -45,7 +46,7 @@ pub async fn add_fic(
     let fandoms = match fandoms {
         None => vec![String::from("Ranma 1/2")],
         Some(fandoms) => fandoms
-            .split(",")
+            .split(',')
             .map(|fandom| fandom.trim().to_owned())
             .collect(),
     };

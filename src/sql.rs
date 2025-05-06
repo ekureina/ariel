@@ -16,10 +16,10 @@ limitations under the License.
 
 use std::collections::HashMap;
 
-use poise::serenity_prelude::FutureExt;
+use itertools::Itertools;
 use sea_orm::{
     ActiveValue, ColumnTrait, ConnectionTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
-    TransactionTrait,
+    QuerySelect, TransactionTrait,
 };
 
 use crate::{
@@ -65,6 +65,7 @@ pub(crate) async fn get_user(
 ///
 /// If a Fic exists with the given title for the given platform, performs a no-op,
 /// even if this is setting a different URL on User Id
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn insert_fic_if_not_exists(
     title: &str,
     platform_id: i32,
@@ -242,4 +243,33 @@ pub(crate) async fn get_song_autocomplete(
             fic,
         )
     })
+}
+
+/// Autocompletes the list of fandoms ariel knows about
+pub(crate) async fn get_fandom_autocomplete(
+    poise_ctx: PoiseContext<'_>,
+    partial: &str,
+) -> Vec<String> {
+    let db = &*poise_ctx.data().database_connection;
+    let partial_owned = partial.to_owned();
+    // Get the current typed in fandom, along with the prefix
+    let (prefix, partial_current_fandom) = partial_owned.rsplit_once(',').map_or_else(
+        || (String::new(), partial_owned.as_str()),
+        |(prefix, partial_fandom)| (format!("{prefix}, "), partial_fandom),
+    );
+
+    Fandoms::find()
+        .filter(fandoms::Column::Name.starts_with(partial_current_fandom))
+        .all(db)
+        .await
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|fandom| {
+            if prefix.contains(&fandom.name) {
+                None
+            } else {
+                Some(prefix.clone() + &fandom.name)
+            }
+        })
+        .collect()
 }
