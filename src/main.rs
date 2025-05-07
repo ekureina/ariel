@@ -112,6 +112,8 @@ async fn main() {
                 ariel::fic_commands::add_fic(),
                 ariel::fic_commands::fic(),
                 ariel::fic_commands::random_fic(),
+                ariel::add_for_birthday_lovespam(),
+                ariel::remove_birthday_lovespam(),
             ],
             on_error: |error| Box::pin(async move { ariel::on_error(&error) }),
             ..Default::default()
