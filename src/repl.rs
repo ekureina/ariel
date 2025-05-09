@@ -83,16 +83,12 @@ async fn run_command(
             phoenix_book,
             phoenix_chapter,
         } => {
-            let (platform_id, _) = sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db)
-                .await
-                .map_err(|err| err.to_string())?
-                .ok_or("Unable to find Fic Platform")?;
             let user = sql::get_user(phoenix_saga_user_id, db)
                 .await
                 .map_err(|err| err.to_string())?;
             let new_fic = sql::insert_fic_if_not_exists(
                 &name,
-                platform_id,
+                &platform,
                 user.id,
                 url,
                 phoenix_book,

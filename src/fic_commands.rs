@@ -39,10 +39,6 @@ pub async fn add_fic(
 ) -> Result<(), PoiseError> {
     let db = &ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
-    let (platform_id, _) = sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db)
-        .await
-        .map_err(|err| err.to_string())?
-        .ok_or("Unable to find Fic Platform")?;
     let user = sql::get_user(ctx.author().id.get(), db).await?;
     let fandoms = match fandoms {
         None => vec![String::from("Ranma 1/2")],
@@ -52,7 +48,7 @@ pub async fn add_fic(
             .collect(),
     };
     let new_fic =
-        sql::insert_fic_if_not_exists(&title, platform_id, user.id, url, None, None, fandoms, db)
+        sql::insert_fic_if_not_exists(&title, &platform, user.id, url, None, None, fandoms, db)
             .await?;
     info!("Created fic: {new_fic:?}");
     ctx.reply(String::from("Added fic ") + &title + " for " + &platform)
