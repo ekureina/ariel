@@ -216,15 +216,12 @@ pub(crate) async fn get_platform_autocomplete(
 ) -> Vec<String> {
     let db = &*poise_ctx.data().database_connection;
     FicPlatforms::find()
+        .select_only()
+        .column(fic_platforms::Column::Name)
         .filter(fic_platforms::Column::Name.starts_with(partial))
+        .into_tuple::<String>()
         .all(db)
         .await
-        .map(|platforms| {
-            platforms
-                .iter()
-                .map(|platform| platform.name.clone())
-                .collect()
-        })
         .unwrap_or_default()
 }
 
@@ -312,16 +309,19 @@ pub(crate) async fn get_fandom_autocomplete(
     );
 
     Fandoms::find()
+        .select_only()
+        .column(fandoms::Column::Name)
         .filter(fandoms::Column::Name.starts_with(partial_current_fandom))
+        .into_tuple::<String>()
         .all(db)
         .await
         .unwrap_or_default()
         .iter()
         .filter_map(|fandom| {
-            if prefix.contains(&fandom.name) {
+            if prefix.contains(fandom) {
                 None
             } else {
-                Some(prefix.clone() + &fandom.name)
+                Some(prefix.clone() + fandom)
             }
         })
         .collect()
