@@ -8,9 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub author_user_id: i32,
-    pub platform_id: i32,
     pub title: String,
-    pub url: String,
     pub phoenix_song_book: Option<i32>,
     pub phoenix_song_chapter: Option<i32>,
     pub is_phoenix_rocktail: bool,
@@ -18,16 +16,10 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(
-        belongs_to = "super::fic_platforms::Entity",
-        from = "Column::PlatformId",
-        to = "super::fic_platforms::Column::Id",
-        on_update = "NoAction",
-        on_delete = "NoAction"
-    )]
-    FicPlatforms,
     #[sea_orm(has_many = "super::fics_fandoms::Entity")]
     FicsFandoms,
+    #[sea_orm(has_many = "super::urls::Entity")]
+    Urls,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::AuthorUserId",
@@ -38,15 +30,15 @@ pub enum Relation {
     Users,
 }
 
-impl Related<super::fic_platforms::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::FicPlatforms.def()
-    }
-}
-
 impl Related<super::fics_fandoms::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::FicsFandoms.def()
+    }
+}
+
+impl Related<super::urls::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Urls.def()
     }
 }
 
@@ -62,6 +54,15 @@ impl Related<super::fandoms::Entity> for Entity {
     }
     fn via() -> Option<RelationDef> {
         Some(super::fics_fandoms::Relation::Fics.def().rev())
+    }
+}
+
+impl Related<super::fic_platforms::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::urls::Relation::FicPlatforms.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::urls::Relation::Fics.def().rev())
     }
 }
 

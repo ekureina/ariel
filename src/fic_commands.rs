@@ -19,7 +19,7 @@ use tracing::{info, instrument};
 
 use crate::{
     PoiseContext, PoiseError,
-    entities::{fandoms, fics, prelude::*},
+    entities::{fandoms, fics, prelude::*, urls},
     sql,
 };
 use sea_orm::{EntityTrait, QueryFilter, prelude::*};
@@ -78,7 +78,8 @@ pub async fn fic(
         sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db).await?
     {
         let fic = Fics::find()
-            .filter(fics::Column::PlatformId.eq(platform_id))
+            .find_also_related(Urls)
+            .filter(urls::Column::PlatformId.eq(platform_id))
             .filter(fics::Column::Title.eq(&name))
             // A Fic, not a Phoenix Song
             .filter(fics::Column::PhoenixSongBook.is_null())
@@ -100,9 +101,12 @@ pub async fn fic(
         };
         let emoji_header = emoji.map(|emoji| format!("{emoji}: ")).unwrap_or_default();
         match fic {
-            Some(fic) => {
-                info!("Found fic: {fic:?}");
-                ctx.reply(emoji_header + &fic.url).await?;
+            Some((fic, Some(url))) => {
+                info!("Found fic: {fic:?}; {url:?}");
+                ctx.reply(emoji_header + &url.url).await?;
+            }
+            Some((_, None)) => {
+                ctx.reply("Found fic, but not for that platform.").await?;
             }
             None => {
                 ctx.reply(emoji_header + "No fics called " + &name + " exist!")
@@ -157,7 +161,8 @@ pub async fn random_fic(
 
     let fics = Fics::find()
         .find_also_related(Fandoms)
-        .filter(fics::Column::PlatformId.eq(platform_id))
+        .find_also_related(Urls)
+        .filter(urls::Column::PlatformId.eq(platform_id))
         .filter(fics::Column::PhoenixSongBook.is_null())
         .filter(fics::Column::PhoenixSongChapter.is_null())
         .filter(fandom_filter)
@@ -173,7 +178,11 @@ pub async fn random_fic(
             fics.choose(&mut rng)
         };
         info!("Picked fic: {picked_fic:?}");
-        ctx.reply(emoji_header + &picked_fic.unwrap().0.url).await?;
+        if let Some((_, Some(_), Some(url))) = picked_fic {
+            ctx.reply(emoji_header + &url.url).await?;
+        } else {
+            ctx.reply("Unable to find a matching fic").await?;
+        }
     }
     Ok(())
 }

@@ -6,5 +6,6 @@ pub mod fandoms;
 pub mod fic_platforms;
 pub mod fics;
 pub mod fics_fandoms;
+pub mod urls;
 pub mod users;
 pub mod writing_prompts;

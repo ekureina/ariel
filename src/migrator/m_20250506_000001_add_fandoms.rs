@@ -40,11 +40,13 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(FicsFandoms::FandomId).integer().not_null())
                     .foreign_key(
                         ForeignKey::create()
+                            .name("FicsFandoms_FicId_Fics_Id")
                             .from(FicsFandoms::Table, FicsFandoms::FicId)
                             .to(Fics::Table, Fics::Id),
                     )
                     .foreign_key(
                         ForeignKey::create()
+                            .name("FicsFandoms_FandomId_Fandom_Id")
                             .from(FicsFandoms::Table, FicsFandoms::FandomId)
                             .to(Fandoms::Table, Fandoms::Id),
                     )

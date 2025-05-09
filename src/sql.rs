@@ -23,7 +23,7 @@ use sea_orm::{
 
 use crate::{
     PoiseContext,
-    entities::{fandoms, fic_platforms, fics, fics_fandoms, prelude::*, users},
+    entities::{fandoms, fic_platforms, fics, fics_fandoms, prelude::*, urls, users},
 };
 
 /// Helper method to translate a platform name into an id and emoji
@@ -76,27 +76,55 @@ pub(crate) async fn insert_fic_if_not_exists(
     db: &DatabaseConnection,
 ) -> Result<fics::Model, DbErr> {
     if let Some(fic) = Fics::find()
-        .filter(fics::Column::PlatformId.eq(platform_id))
+        .find_also_related(FicPlatforms)
+        .filter(fic_platforms::Column::Id.eq(platform_id))
         .filter(fics::Column::Title.eq(title))
         .one(db)
         .await?
     {
-        Ok(fic)
+        Ok(fic.0)
     } else {
-        let model = fics::ActiveModel {
+        /*let model = fics::ActiveModel {
             author_user_id: ActiveValue::Set(user_id),
-            platform_id: ActiveValue::Set(platform_id),
+            //platform_id: ActiveValue::Set(platform_id),
             title: ActiveValue::Set(title.to_owned()),
-            url: ActiveValue::Set(url),
+            //url: ActiveValue::Set(url),
             phoenix_song_book: ActiveValue::Set(phoenix_book.into()),
             phoenix_song_chapter: ActiveValue::Set(phoenix_chapter.into()),
             ..Default::default()
-        };
+        };*/
 
         let transaction = db.begin().await?;
 
-        let fic = match Fics::insert(model).exec_with_returning(&transaction).await {
+        let fic = match Fics::insert(fics::ActiveModel {
+            author_user_id: ActiveValue::Set(user_id),
+            //platform_id: ActiveValue::Set(platform_id),
+            title: ActiveValue::Set(title.to_owned()),
+            //url: ActiveValue::Set(url),
+            phoenix_song_book: ActiveValue::Set(phoenix_book.into()),
+            phoenix_song_chapter: ActiveValue::Set(phoenix_chapter.into()),
+            ..Default::default()
+        })
+        .exec_with_returning(&transaction)
+        .await
+        {
             Ok(fic) => fic,
+            Err(err) => {
+                transaction.rollback().await?;
+                return Err(err);
+            }
+        };
+
+        match Urls::insert(urls::ActiveModel {
+            url: ActiveValue::Set(url),
+            fic_id: ActiveValue::Set(fic.id),
+            platform_id: ActiveValue::Set(platform_id),
+            ..Default::default()
+        })
+        .exec(&transaction)
+        .await
+        {
+            Ok(url) => url,
             Err(err) => {
                 transaction.rollback().await?;
                 return Err(err);

@@ -4,5 +4,6 @@ pub use super::fandoms::Entity as Fandoms;
 pub use super::fic_platforms::Entity as FicPlatforms;
 pub use super::fics::Entity as Fics;
 pub use super::fics_fandoms::Entity as FicsFandoms;
+pub use super::urls::Entity as Urls;
 pub use super::users::Entity as Users;
 pub use super::writing_prompts::Entity as WritingPrompts;

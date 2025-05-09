@@ -5,7 +5,7 @@ use tracing::{info, instrument};
 
 use crate::{
     PoiseContext, PoiseError,
-    entities::{fics, prelude::*},
+    entities::{fics, prelude::*, urls},
     sql,
 };
 
@@ -80,7 +80,8 @@ pub async fn song(
         sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db).await?
     {
         let fic = Fics::find()
-            .filter(fics::Column::PlatformId.eq(platform_id))
+            .find_also_related(Urls)
+            .filter(urls::Column::PlatformId.eq(platform_id))
             .filter(fics::Column::Title.eq(&title))
             .one(db)
             .await?;
@@ -99,9 +100,14 @@ pub async fn song(
         };
         let emoji_header = emoji.map(|emoji| format!("{emoji}: ")).unwrap_or_default();
         match fic {
-            Some(fic) => {
+            Some((fic, Some(url))) => {
                 info!("Found fic: {fic:?}");
-                ctx.reply(emoji_header + &fic.url).await?;
+                ctx.reply(emoji_header + &url.url).await?;
+            }
+            Some((_, None)) => {
+                info!("Found fic, but not the platform");
+                ctx.reply("Found fic, but it does not exist for this platform")
+                    .await?;
             }
             None => {
                 ctx.reply(emoji_header + "No songs called " + &title + " exist!")
@@ -140,7 +146,8 @@ pub async fn random_song(
     {
         // Grab all fics we could consider
         let valid_fics = Fics::find()
-            .filter(fics::Column::PlatformId.eq(platform_id))
+            .find_also_related(Urls)
+            .filter(urls::Column::PlatformId.eq(platform_id))
             // Is a Phoenix song
             .filter(fics::Column::PhoenixSongBook.is_not_null())
             .filter(fics::Column::PhoenixSongChapter.is_not_null())
@@ -181,7 +188,9 @@ pub async fn random_song(
                 valid_fics.choose(&mut rng)
             };
             info!("Picked fic: {picked_fic:?}");
-            ctx.reply(emoji_header + &picked_fic.unwrap().url).await?;
+            if let Some((_, Some(url))) = picked_fic {
+                ctx.reply(emoji_header + &url.url).await?;
+            }
         }
     } else {
         ctx.reply("Unknown Fic Platform, could not not find song")

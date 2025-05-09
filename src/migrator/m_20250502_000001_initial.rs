@@ -70,9 +70,7 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Fics::AuthorUserId).integer().not_null())
-                    .col(ColumnDef::new(Fics::PlatformId).integer().not_null())
                     .col(ColumnDef::new(Fics::Title).string_len(200).not_null())
-                    .col(ColumnDef::new(Fics::Url).string_len(1024).not_null())
                     .col(ColumnDef::new(Fics::PhoenixSongBook).integer().null())
                     .col(ColumnDef::new(Fics::PhoenixSongChapter).integer().null())
                     .col(
@@ -83,17 +81,45 @@ impl MigrationTrait for Migration {
                     )
                     .foreign_key(
                         ForeignKey::create()
+                            .name("Fics_AuthorUserId_Users_Id")
                             .from(Fics::Table, Fics::AuthorUserId)
                             .to(Users::Table, Users::Id),
-                    )
-                    .foreign_key(
-                        ForeignKey::create()
-                            .from(Fics::Table, Fics::PlatformId)
-                            .to(FicPlatforms::Table, FicPlatforms::Id),
                     )
                     .to_owned(),
             )
             .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Urls::Table)
+                    /*.col(
+                        ColumnDef::new(Urls::Id)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )*/
+                    .col(ColumnDef::new(Urls::Url).string_len(1024).not_null())
+                    .col(ColumnDef::new(Urls::FicId).integer().not_null())
+                    .col(ColumnDef::new(Urls::PlatformId).integer().not_null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("Urls_FicId_Fics_id")
+                            .from(Urls::Table, Urls::FicId)
+                            .to(Fics::Table, Fics::Id),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("Urls_PlatformId_FicPlatforms_id")
+                            .from(Urls::Table, Urls::PlatformId)
+                            .to(FicPlatforms::Table, FicPlatforms::Id),
+                    )
+                    .primary_key(Index::create().col(Urls::FicId).col(Urls::PlatformId))
+                    .to_owned(),
+            )
+            .await?;
+
         manager
             .create_table(
                 Table::create()
@@ -248,6 +274,15 @@ impl Migration {
 }
 
 #[derive(Iden)]
+pub enum Urls {
+    Table,
+    //Id,
+    Url,
+    FicId,
+    PlatformId,
+}
+
+#[derive(Iden)]
 pub enum Users {
     Table,
     Id,
@@ -271,9 +306,7 @@ pub enum Fics {
     Table,
     Id,
     AuthorUserId,
-    PlatformId,
     Title,
-    Url,
     PhoenixSongBook,
     PhoenixSongChapter,
     IsPhoenixRocktail,
