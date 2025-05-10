@@ -1,0 +1,36 @@
+name: Build
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: cargo build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Set up Cargo Cache
+        uses: Swatinem/rust-cache@v2
+      - run: cargo build --all-features
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: cargo test
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Set up Cargo Cache
+        uses: Swatinem/rust-cache@v2
+      - run: cargo test --all-features
+  clippy:
+    name: cargo clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Set up Cargo Cache
+        uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-features

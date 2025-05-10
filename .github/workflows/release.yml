@@ -1,0 +1,57 @@
+name: Release
+on:
+  push:
+    tags:
+    - '[0-9]+.[0-9]+'
+    - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+env:
+  preview: ${{ !startsWith(github.ref, 'refs/tags/') }}
+jobs:
+  release:
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+    strategy:
+      matrix:
+        build: [x86_64-linux, x86_64-macos, aarch64-macos, x86_64-windows]
+        include:
+        - build: x86_64-linux
+          os: ubuntu-latest
+          target: x86_64-unknown-linux-gnu
+          asset_suffix: ""
+          key_prefix: linux-amd64
+        - build: x86_64-macos
+          os: macos-latest
+          target: x86_64-apple-darwin
+          asset_suffix: ""
+          key_prefix: macos-amd64
+        - build: aarch64-macos
+          os: macos-latest
+          target: aarch64-apple-darwin
+          asset_suffix: ""
+          key_prefix: macos-arm64
+        - build: x86_64-windows
+          os: windows-latest
+          target: x86_64-pc-windows-gnu
+          asset_suffix: .exe
+          key_prefix: windows-gnu-amd64
+    name: release
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Install cargo for ${{ matrix.target }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Set up Cargo Cache
+        uses: Swatinem/rust-cache@v2
+      - name: Build Binary
+        run: cargo build --all-features --release --target ${{ matrix.target }}
+      - name: Upload release
+        if: env.preview == 'false'
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: target/${{ matrix.target }}/release/ariel${{ matrix.asset_suffix }}
+          asset_name: ariel_$tag_${{ matrix.target }}${{ matrix.asset_suffix }}
