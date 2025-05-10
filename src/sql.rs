@@ -22,7 +22,7 @@ use sea_orm::{
 };
 
 use crate::{
-    PoiseContext,
+    ArielPoiseContext,
     entities::{fandoms, fic_platforms, fics, fics_fandoms, prelude::*, urls, users},
 };
 
@@ -211,7 +211,7 @@ pub(crate) async fn get_or_create_fandom<C: ConnectionTrait>(
 
 /// Autocompletes the list of platforms ariel knows about
 pub(crate) async fn get_platform_autocomplete(
-    poise_ctx: PoiseContext<'_>,
+    poise_ctx: ArielPoiseContext<'_>,
     partial: &str,
 ) -> Vec<String> {
     let db = &*poise_ctx.data().database_connection;
@@ -227,7 +227,7 @@ pub(crate) async fn get_platform_autocomplete(
 
 /// Autocompletes the list of fics ariel knows about
 pub(crate) async fn get_fic_autocomplete(
-    poise_ctx: PoiseContext<'_>,
+    poise_ctx: ArielPoiseContext<'_>,
     partial: &str,
 ) -> impl Iterator<Item = poise::serenity_prelude::AutocompleteChoice> {
     let db = &*poise_ctx.data().database_connection;
@@ -262,7 +262,7 @@ pub(crate) async fn get_fic_autocomplete(
 
 /// Autocompletes the list of songs ariel knows about
 pub(crate) async fn get_song_autocomplete(
-    poise_ctx: PoiseContext<'_>,
+    poise_ctx: ArielPoiseContext<'_>,
     partial: &str,
 ) -> impl Iterator<Item = poise::serenity_prelude::AutocompleteChoice> {
     let db = &*poise_ctx.data().database_connection;
@@ -297,7 +297,7 @@ pub(crate) async fn get_song_autocomplete(
 
 /// Autocompletes the list of fandoms ariel knows about
 pub(crate) async fn get_fandom_autocomplete(
-    poise_ctx: PoiseContext<'_>,
+    poise_ctx: ArielPoiseContext<'_>,
     partial: &str,
 ) -> Vec<String> {
     let db = &*poise_ctx.data().database_connection;

@@ -4,7 +4,7 @@ use sea_orm::{EntityTrait, QueryFilter, prelude::*, sea_query::Condition};
 use tracing::{info, instrument};
 
 use crate::{
-    PoiseContext, PoiseError,
+    ArielError, ArielPoiseContext,
     entities::{fics, prelude::*, urls},
     sql,
 };
@@ -29,7 +29,7 @@ limitations under the License.
 #[poise::command(prefix_command, slash_command, check = "crate::is_phoenix_author")]
 #[instrument(skip(ctx))]
 pub async fn add_song(
-    ctx: PoiseContext<'_>,
+    ctx: ArielPoiseContext<'_>,
     #[description = "Name of the song to add"] title: String,
     #[description = "Name of the platform to add to"]
     #[autocomplete = "crate::sql::get_platform_autocomplete"]
@@ -37,7 +37,7 @@ pub async fn add_song(
     #[description = "Song's URL"] url: String,
     #[description = "Phoenix Book"] phoenix_book: i32,
     #[description = "Phoenix Chapter"] phoenix_chapter: i32,
-) -> Result<(), PoiseError> {
+) -> Result<(), ArielError> {
     let db = &ctx.data().database_connection;
     let phoenix_saga_user_id = ctx.data().phoenix_author_id.get();
     let user = sql::get_user(phoenix_saga_user_id, db).await?;
@@ -62,14 +62,14 @@ pub async fn add_song(
 #[poise::command(prefix_command, slash_command)]
 #[instrument(skip(ctx))]
 pub async fn song(
-    ctx: PoiseContext<'_>,
+    ctx: ArielPoiseContext<'_>,
     #[description = "Name of the song to link to"]
     #[autocomplete = "crate::sql::get_song_autocomplete"]
     title: String,
     #[description = "Name of the platform to link to, defaults to AO3"]
     #[autocomplete = "crate::sql::get_platform_autocomplete"]
     platform: Option<String>,
-) -> Result<(), PoiseError> {
+) -> Result<(), ArielError> {
     let db = &*ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
     if let Some((platform_id, platform_emoji)) =
@@ -121,7 +121,7 @@ pub async fn song(
 #[poise::command(prefix_command, slash_command)]
 #[instrument(skip(ctx))]
 pub async fn random_song(
-    ctx: PoiseContext<'_>,
+    ctx: ArielPoiseContext<'_>,
     #[description = "Maximum Phoenix Book Number, defaults to latest book"] max_book_number: Option<
         i32,
     >,
@@ -130,7 +130,7 @@ pub async fn random_song(
     #[description = "Fic Platform to use, defaults to AO3"]
     #[autocomplete = "crate::sql::get_platform_autocomplete"]
     fic_platform: Option<String>,
-) -> Result<(), PoiseError> {
+) -> Result<(), ArielError> {
     // pull out the relevant data
     let db = &*ctx.data().database_connection;
     let max_book = max_book_number.unwrap_or(i32::MAX);

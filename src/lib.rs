@@ -51,18 +51,18 @@ impl PoiseData {
     }
 }
 
-type PoiseError = Box<dyn std::error::Error + Send + Sync>;
-type PoiseContext<'a> = poise::Context<'a, PoiseData, PoiseError>;
+type ArielError = Box<dyn std::error::Error + Send + Sync>;
+type ArielPoiseContext<'a> = poise::Context<'a, PoiseData, ArielError>;
 
 /// Ping Ariel, and optionally echo the arguments
 #[poise::command(prefix_command)]
 #[instrument(skip(ctx))]
 pub async fn ping(
-    ctx: PoiseContext<'_>,
+    ctx: ArielPoiseContext<'_>,
     #[description = "Echo Text"]
     #[rest]
     ping: Option<String>,
-) -> Result<(), PoiseError> {
+) -> Result<(), ArielError> {
     let is_admin_tag = if is_admin(ctx).await.unwrap_or_default() {
         String::from("from admin")
     } else {
@@ -82,7 +82,7 @@ pub async fn ping(
 #[poise::command(slash_command)]
 #[instrument(skip(ctx))]
 pub async fn add_for_birthday_lovespam(
-    ctx: PoiseContext<'_>,
+    ctx: ArielPoiseContext<'_>,
     #[description = "Birthday Month"]
     #[min = 1]
     #[max = 12]
@@ -92,7 +92,7 @@ pub async fn add_for_birthday_lovespam(
     #[max = 31]
     birthday_day: u8,
     #[description = "Timezone, named (example: America/Los_Angeles)"] timezone: String,
-) -> Result<(), PoiseError> {
+) -> Result<(), ArielError> {
     if chrono_tz::Tz::from_str_insensitive(&timezone).is_err() {
         ctx.reply("Invalid timezone: {timezone}").await?;
     } else if chrono::NaiveDate::from_ymd_opt(2024, birthday_month.into(), birthday_day.into())
@@ -123,7 +123,7 @@ pub async fn add_for_birthday_lovespam(
 /// Remove user for Birthday Love Spams
 #[poise::command(slash_command)]
 #[instrument(skip(ctx))]
-pub async fn remove_birthday_lovespam(ctx: PoiseContext<'_>) -> Result<(), PoiseError> {
+pub async fn remove_birthday_lovespam(ctx: ArielPoiseContext<'_>) -> Result<(), ArielError> {
     let user_id = ctx.author().id.get();
     let db = &*ctx.data().database_connection;
     let user = sql::get_user(user_id, db).await?;
@@ -144,17 +144,17 @@ pub async fn remove_birthday_lovespam(ctx: PoiseContext<'_>) -> Result<(), Poise
 /// Register Ariel's slash commands
 #[poise::command(prefix_command)]
 #[instrument]
-pub async fn register(ctx: PoiseContext<'_>) -> Result<(), PoiseError> {
+pub async fn register(ctx: ArielPoiseContext<'_>) -> Result<(), ArielError> {
     info!("Registering slash commands");
     poise::builtins::register_application_commands_buttons(ctx).await?;
     Ok(())
 }
 
-pub fn on_error(error: &poise::FrameworkError<'_, PoiseData, PoiseError>) {
+pub fn on_error(error: &poise::FrameworkError<'_, PoiseData, ArielError>) {
     error!("Error: {}", error);
 }
 
-pub(crate) async fn is_admin(ctx: PoiseContext<'_>) -> Result<bool, PoiseError> {
+pub(crate) async fn is_admin(ctx: ArielPoiseContext<'_>) -> Result<bool, ArielError> {
     info!("Checking Admin permissions");
     Ok(ctx
         .author_member()
@@ -163,7 +163,7 @@ pub(crate) async fn is_admin(ctx: PoiseContext<'_>) -> Result<bool, PoiseError> 
 }
 
 #[allow(clippy::unused_async)]
-pub(crate) async fn is_phoenix_author(ctx: PoiseContext<'_>) -> Result<bool, PoiseError> {
+pub(crate) async fn is_phoenix_author(ctx: ArielPoiseContext<'_>) -> Result<bool, ArielError> {
     info!("Checking if user is the Phoenix Author");
     Ok(ctx.author().id == ctx.data().phoenix_author_id)
 }

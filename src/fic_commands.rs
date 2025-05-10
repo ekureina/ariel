@@ -18,7 +18,7 @@ limitations under the License.
 use tracing::{info, instrument};
 
 use crate::{
-    PoiseContext, PoiseError,
+    ArielError, ArielPoiseContext,
     entities::{fandoms, fics, prelude::*, urls},
     sql,
 };
@@ -27,7 +27,7 @@ use sea_orm::{EntityTrait, QueryFilter, prelude::*};
 #[poise::command(prefix_command, slash_command)]
 #[instrument(skip(ctx))]
 pub async fn add_fic(
-    ctx: PoiseContext<'_>,
+    ctx: ArielPoiseContext<'_>,
     #[description = "Name of the pic to add"] title: String,
     #[description = "Name of the platform to add to, defaults to AO3"]
     #[autocomplete = "crate::sql::get_platform_autocomplete"]
@@ -36,7 +36,7 @@ pub async fn add_fic(
     #[description = "Fandoms associated to the fic, defaults to \"Ranma 1/2\". For Crossovers, separate by commas."]
     #[autocomplete = "crate::sql::get_fandom_autocomplete"]
     fandoms: Option<String>,
-) -> Result<(), PoiseError> {
+) -> Result<(), ArielError> {
     let db = &ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
     let user = sql::get_user(ctx.author().id.get(), db).await?;
@@ -60,14 +60,14 @@ pub async fn add_fic(
 #[poise::command(prefix_command, slash_command)]
 #[instrument(skip(ctx))]
 pub async fn fic(
-    ctx: PoiseContext<'_>,
+    ctx: ArielPoiseContext<'_>,
     #[description = "Name of the fic to link to"]
     #[autocomplete = "crate::sql::get_fic_autocomplete"]
     name: String,
     #[description = "Name of the platform to link to, defaults to AO3"]
     #[autocomplete = "crate::sql::get_platform_autocomplete"]
     platform: Option<String>,
-) -> Result<(), PoiseError> {
+) -> Result<(), ArielError> {
     let db = &*ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
     if let Some((platform_id, platform_emoji)) =
@@ -120,14 +120,14 @@ pub async fn fic(
 #[poise::command(prefix_command, slash_command)]
 #[instrument(skip(ctx))]
 pub async fn random_fic(
-    ctx: PoiseContext<'_>,
+    ctx: ArielPoiseContext<'_>,
     #[description = "Fandom of fic, if any. Will include crossovers into this fandom. Default will search all fandoms."]
     #[autocomplete = "crate::sql::get_fandom_autocomplete"]
     fandom: Option<String>,
     #[description = "Name of the platform to link to, defaults to AO3"]
     #[autocomplete = "crate::sql::get_platform_autocomplete"]
     platform: Option<String>,
-) -> Result<(), PoiseError> {
+) -> Result<(), ArielError> {
     let db = &*ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
     let (platform_id, platform_emoji) =
