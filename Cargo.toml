@@ -8,7 +8,6 @@ license = "Apache-2.0"
 chrono = "0.4.41"
 chrono-tz = { version = "0.10.3", features = ["case-insensitive"] }
 clap = { version = "4.5.37", features = ["derive", "env", "wrap_help"] }
-itertools = "0.14.0"
 poise = "0.6.1"
 rand = "0.9.1"
 sea-orm = { version = "1.1.10", features = ["runtime-tokio", "sqlx-all"] }
