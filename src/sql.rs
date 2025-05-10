@@ -119,46 +119,50 @@ pub(crate) async fn insert_fic_if_not_exists(
     let phoenix_book = phoenix_book.into();
     let phoenix_chapter = phoenix_chapter.into();
 
-    db.transaction::<_, fics::Model, DbErr>(|tx| {
-        Box::pin(async move {
-            let fic = Fics::insert(fics::ActiveModel {
-                author_user_id: ActiveValue::Set(user_id),
-                title: ActiveValue::Set(title),
-                phoenix_song_book: ActiveValue::Set(phoenix_book),
-                phoenix_song_chapter: ActiveValue::Set(phoenix_chapter),
-                ..Default::default()
-            })
-            .exec_with_returning(tx)
-            .await?;
-            let Some(platform_id) = FicPlatforms::find()
-                .select_only()
-                .column(fic_platforms::Column::Id)
-                .filter(fic_platforms::Column::Name.eq(platform))
-                .into_tuple()
-                .one(tx)
-                .await?
-            else {
-                return Err(DbErr::RecordNotFound("No Platform found".to_owned()));
-            };
-            Urls::insert(urls::ActiveModel {
-                url: ActiveValue::Set(url),
-                fic_id: ActiveValue::Set(fic.id),
-                platform_id: ActiveValue::Set(platform_id),
-            })
-            .exec(tx)
-            .await?;
-            let mut database_fandoms = vec![];
-            for fandom in fandoms {
-                let fandom = get_or_create_fandom(&fandom, tx).await?;
-                database_fandoms.push(fics_fandoms::ActiveModel {
+    db.transaction_with_config::<_, fics::Model, DbErr>(
+        |tx| {
+            Box::pin(async move {
+                let fic = Fics::insert(fics::ActiveModel {
+                    author_user_id: ActiveValue::Set(user_id),
+                    title: ActiveValue::Set(title),
+                    phoenix_song_book: ActiveValue::Set(phoenix_book),
+                    phoenix_song_chapter: ActiveValue::Set(phoenix_chapter),
+                    ..Default::default()
+                })
+                .exec_with_returning(tx)
+                .await?;
+                let Some(platform_id) = FicPlatforms::find()
+                    .select_only()
+                    .column(fic_platforms::Column::Id)
+                    .filter(fic_platforms::Column::Name.eq(platform))
+                    .into_tuple()
+                    .one(tx)
+                    .await?
+                else {
+                    return Err(DbErr::RecordNotFound("No Platform found".to_owned()));
+                };
+                Urls::insert(urls::ActiveModel {
+                    url: ActiveValue::Set(url),
                     fic_id: ActiveValue::Set(fic.id),
-                    fandom_id: ActiveValue::Set(fandom.id),
-                });
-            }
-            FicsFandoms::insert_many(database_fandoms).exec(tx).await?;
-            Ok(fic)
-        })
-    })
+                    platform_id: ActiveValue::Set(platform_id),
+                })
+                .exec(tx)
+                .await?;
+                let mut database_fandoms = vec![];
+                for fandom in fandoms {
+                    let fandom = get_or_create_fandom(&fandom, tx).await?;
+                    database_fandoms.push(fics_fandoms::ActiveModel {
+                        fic_id: ActiveValue::Set(fic.id),
+                        fandom_id: ActiveValue::Set(fandom.id),
+                    });
+                }
+                FicsFandoms::insert_many(database_fandoms).exec(tx).await?;
+                Ok(fic)
+            })
+        },
+        Some(sea_orm::IsolationLevel::Serializable),
+        Some(sea_orm::AccessMode::ReadWrite),
+    )
     .await
     .map_err(ArielError::from)
 }
