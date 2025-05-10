@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use entities::users;
-use poise::serenity_prelude::{RoleId, UserId};
+use poise::serenity_prelude::{Cache, Http, RoleId, UserId};
 use sea_orm::{ActiveModelTrait, ActiveValue, DatabaseConnection};
 use tracing::{error, info, instrument};
 
@@ -174,4 +174,29 @@ pub(crate) async fn is_admin(ctx: ArielPoiseContext<'_>) -> Result<bool, ArielEr
 pub(crate) async fn is_phoenix_author(ctx: ArielPoiseContext<'_>) -> Result<bool, ArielError> {
     info!("Checking if user is the Phoenix Author");
     Ok(ctx.author().id == ctx.data().phoenix_author_id)
+}
+
+#[derive(Debug, Clone)]
+pub struct TaskCacheHttp {
+    http: Arc<Http>,
+    cache: Arc<Cache>,
+}
+
+impl TaskCacheHttp {
+    pub fn new(http: impl Into<Arc<Http>>, cache: impl Into<Arc<Cache>>) -> Self {
+        Self {
+            http: http.into(),
+            cache: cache.into(),
+        }
+    }
+}
+
+impl poise::serenity_prelude::CacheHttp for TaskCacheHttp {
+    fn http(&self) -> &Http {
+        &self.http
+    }
+
+    fn cache(&self) -> Option<&Arc<Cache>> {
+        Some(&self.cache)
+    }
 }
