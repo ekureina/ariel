@@ -17,7 +17,6 @@ limitations under the License.
 use std::sync::Arc;
 
 use ariel::{ArielData, migrator::Migrator};
-use chrono::NaiveTime;
 use clap::Parser;
 
 use poise::serenity_prelude::{self as serenity, ChannelId, RoleId, UserId};
@@ -27,7 +26,7 @@ use sea_orm_migration::MigratorTrait;
 use tokio::task::JoinSet;
 use tracing_subscriber::{EnvFilter, prelude::*};
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, clap::Parser)]
+#[derive(Clone, PartialEq, Eq, clap::Parser)]
 struct ArielArgs {
     /// The discord token to use to connect to Discord
     #[arg(short, long, env)]
@@ -38,32 +37,16 @@ struct ArielArgs {
     pub sql_url: String,
     /// The Role Id of a special Guild Role with Admin Permissions
     #[arg(short, long, env)]
-    admin_role_id: u64,
+    pub admin_role_id: RoleId,
     /// The Discord User Id of the Author of The Phoenix Saga
     #[arg(long, env)]
-    pub phoenix_saga_user_id: u64,
+    pub phoenix_saga_user_id: UserId,
     #[arg(long, env)]
-    writing_dice_channel_id: u64,
-    #[arg(long, env)]
-    writing_dice_time_zone: String,
-}
-
-impl ArielArgs {
-    pub fn get_ariel_admin_group_id(&self) -> RoleId {
-        RoleId::new(self.admin_role_id)
-    }
-
-    pub fn get_phoenix_author_id(&self) -> UserId {
-        UserId::new(self.phoenix_saga_user_id)
-    }
-
-    pub fn get_writing_dice_channel_id(&self) -> ChannelId {
-        ChannelId::new(self.writing_dice_channel_id)
-    }
-
-    pub fn get_writing_dice_time_zone(&self) -> chrono_tz::Tz {
-        chrono_tz::Tz::from_str_insensitive(&self.writing_dice_time_zone).expect("Invalid timezone")
-    }
+    pub writing_dice_channel_id: ChannelId,
+    #[arg(long, env, default_value_t = chrono_tz::Tz::America__Los_Angeles)]
+    pub writing_dice_time_zone: chrono_tz::Tz,
+    #[arg(long, env, default_value_t = chrono::NaiveTime::from_hms_opt(9, 0, 0).unwrap())]
+    pub writing_dice_time: chrono::NaiveTime,
 }
 
 #[tokio::main]
@@ -109,8 +92,8 @@ async fn main() {
         | serenity::GatewayIntents::DIRECT_MESSAGES
         | serenity::GatewayIntents::MESSAGE_CONTENT;
     let data = ArielData::new(
-        args.get_phoenix_author_id(),
-        args.get_ariel_admin_group_id(),
+        args.phoenix_saga_user_id,
+        args.admin_role_id,
         Arc::clone(&db),
     );
 
@@ -151,14 +134,14 @@ async fn main() {
     // Provide a means of stopping the bot without sending a kill signal
     join_set.spawn(ariel::repl::run_commands(
         db.clone(),
-        args.phoenix_saga_user_id,
+        args.phoenix_saga_user_id.get(),
     ));
     join_set.spawn(ariel::tasks::writing_dice_threads(
         db,
         http_client,
-        args.get_writing_dice_channel_id(),
-        NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
-        args.get_writing_dice_time_zone(),
+        args.writing_dice_channel_id,
+        args.writing_dice_time,
+        args.writing_dice_time_zone,
     ));
     join_set
         .join_next()
