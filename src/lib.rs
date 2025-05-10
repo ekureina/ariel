@@ -55,6 +55,8 @@ impl PoiseData {
 pub enum ArielError {
     #[error("Error connecting to DB: {0}")]
     SeaDBErr(#[from] sea_orm::DbErr),
+    #[error("Error performing DB Transaction: {0}")]
+    SeaDBTransactionError(#[from] sea_orm::TransactionError<sea_orm::DbErr>),
     #[error("Error connecting to Discord: {0}")]
     SerenityError(#[from] poise::serenity_prelude::prelude::SerenityError),
 }

@@ -22,7 +22,7 @@ use sea_orm::{
 };
 
 use crate::{
-    ArielPoiseContext,
+    ArielError, ArielPoiseContext,
     entities::{fandoms, fic_platforms, fics, fics_fandoms, prelude::*, urls, users},
 };
 
@@ -74,7 +74,7 @@ pub(crate) async fn insert_fic_if_not_exists(
     phoenix_chapter: impl Into<Option<i32>>,
     fandoms: Vec<String>,
     db: &DatabaseConnection,
-) -> Result<fics::Model, DbErr> {
+) -> Result<fics::Model, ArielError> {
     if let Some(fic) = Fics::find()
         .filter(fics::Column::Title.eq(title))
         .one(db)
@@ -109,84 +109,58 @@ pub(crate) async fn insert_fic_if_not_exists(
                         .await?;
                         Ok(fic)
                     }
-                    None => Err(DbErr::RecordNotFound("No Platform found".to_owned())),
+                    None => Err(DbErr::RecordNotFound("No Platform found".to_owned()).into()),
                 };
             }
         }
     }
-    let transaction = db.begin().await?;
+    let title = title.to_owned();
+    let platform = platform.to_owned();
+    let phoenix_book = phoenix_book.into();
+    let phoenix_chapter = phoenix_chapter.into();
 
-    let fic = match Fics::insert(fics::ActiveModel {
-        author_user_id: ActiveValue::Set(user_id),
-        title: ActiveValue::Set(title.to_owned()),
-        phoenix_song_book: ActiveValue::Set(phoenix_book.into()),
-        phoenix_song_chapter: ActiveValue::Set(phoenix_chapter.into()),
-        ..Default::default()
-    })
-    .exec_with_returning(&transaction)
-    .await
-    {
-        Ok(fic) => fic,
-        Err(err) => {
-            transaction.rollback().await?;
-            return Err(err);
-        }
-    };
-
-    let Some(platform_id) = FicPlatforms::find()
-        .select_only()
-        .column(fic_platforms::Column::Id)
-        .filter(fic_platforms::Column::Name.eq(platform))
-        .into_tuple()
-        .one(&transaction)
-        .await?
-    else {
-        return Err(DbErr::RecordNotFound("No Platform found".to_owned()));
-    };
-
-    match Urls::insert(urls::ActiveModel {
-        url: ActiveValue::Set(url),
-        fic_id: ActiveValue::Set(fic.id),
-        platform_id: ActiveValue::Set(platform_id),
-    })
-    .exec(&transaction)
-    .await
-    {
-        Ok(url) => url,
-        Err(err) => {
-            transaction.rollback().await?;
-            return Err(err);
-        }
-    };
-
-    let mut database_fandoms = vec![];
-    for fandom in fandoms {
-        match get_or_create_fandom(&fandom, &transaction).await {
-            Ok(fandom) => database_fandoms.push(fics_fandoms::ActiveModel {
+    db.transaction::<_, fics::Model, DbErr>(|tx| {
+        Box::pin(async move {
+            let fic = Fics::insert(fics::ActiveModel {
+                author_user_id: ActiveValue::Set(user_id),
+                title: ActiveValue::Set(title),
+                phoenix_song_book: ActiveValue::Set(phoenix_book),
+                phoenix_song_chapter: ActiveValue::Set(phoenix_chapter),
+                ..Default::default()
+            })
+            .exec_with_returning(tx)
+            .await?;
+            let Some(platform_id) = FicPlatforms::find()
+                .select_only()
+                .column(fic_platforms::Column::Id)
+                .filter(fic_platforms::Column::Name.eq(platform))
+                .into_tuple()
+                .one(tx)
+                .await?
+            else {
+                return Err(DbErr::RecordNotFound("No Platform found".to_owned()));
+            };
+            Urls::insert(urls::ActiveModel {
+                url: ActiveValue::Set(url),
                 fic_id: ActiveValue::Set(fic.id),
-                fandom_id: ActiveValue::Set(fandom.id),
-            }),
-            Err(err) => {
-                transaction.rollback().await?;
-                return Err(err);
+                platform_id: ActiveValue::Set(platform_id),
+            })
+            .exec(tx)
+            .await?;
+            let mut database_fandoms = vec![];
+            for fandom in fandoms {
+                let fandom = get_or_create_fandom(&fandom, tx).await?;
+                database_fandoms.push(fics_fandoms::ActiveModel {
+                    fic_id: ActiveValue::Set(fic.id),
+                    fandom_id: ActiveValue::Set(fandom.id),
+                });
             }
-        }
-    }
-
-    match FicsFandoms::insert_many(database_fandoms)
-        .exec(&transaction)
-        .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            transaction.rollback().await?;
-            return Err(err);
-        }
-    }
-
-    transaction.commit().await?;
-
-    Ok(fic)
+            FicsFandoms::insert_many(database_fandoms).exec(tx).await?;
+            Ok(fic)
+        })
+    })
+    .await
+    .map_err(ArielError::from)
 }
 
 /// Gets the specified fandom, creating if necessary
