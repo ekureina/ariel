@@ -51,7 +51,13 @@ impl PoiseData {
     }
 }
 
-type ArielError = Box<dyn std::error::Error + Send + Sync>;
+#[derive(Debug, thiserror::Error)]
+pub enum ArielError {
+    #[error("Error connecting to DB: {0}")]
+    SeaDBErr(#[from] sea_orm::DbErr),
+    #[error("Error connecting to Discord: {0}")]
+    SerenityError(#[from] poise::serenity_prelude::prelude::SerenityError),
+}
 type ArielPoiseContext<'a> = poise::Context<'a, PoiseData, ArielError>;
 
 /// Ping Ariel, and optionally echo the arguments

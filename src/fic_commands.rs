@@ -131,10 +131,13 @@ pub async fn random_fic(
     let db = &*ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
     let (platform_id, platform_emoji) =
-        sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db)
-            .await
-            .map_err(|err| err.to_string())?
-            .ok_or("Unable to find Fic Platform")?;
+        match sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db).await? {
+            Some(platform_data) => platform_data,
+            None => {
+                ctx.reply("Unable to find Fic Platform").await?;
+                return Ok(());
+            }
+        };
 
     let fandom_filter = match fandom {
         Some(fandom) => fandoms::Column::Name.eq(fandom),
