@@ -17,9 +17,10 @@ limitations under the License.
 use std::sync::Arc;
 
 use ariel::{ArielData, migrator::Migrator};
+use chrono::NaiveTime;
 use clap::Parser;
 
-use poise::serenity_prelude::{self as serenity, RoleId, UserId};
+use poise::serenity_prelude::{self as serenity, ChannelId, RoleId, UserId};
 
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
@@ -41,6 +42,10 @@ struct ArielArgs {
     /// The Discord User Id of the Author of The Phoenix Saga
     #[arg(long, env)]
     pub phoenix_saga_user_id: u64,
+    #[arg(long, env)]
+    writing_dice_channel_id: u64,
+    #[arg(long, env)]
+    writing_dice_time_zone: String,
 }
 
 impl ArielArgs {
@@ -50,6 +55,14 @@ impl ArielArgs {
 
     pub fn get_phoenix_author_id(&self) -> UserId {
         UserId::new(self.phoenix_saga_user_id)
+    }
+
+    pub fn get_writing_dice_channel_id(&self) -> ChannelId {
+        ChannelId::new(self.writing_dice_channel_id)
+    }
+
+    pub fn get_writing_dice_time_zone(&self) -> chrono_tz::Tz {
+        chrono_tz::Tz::from_str_insensitive(&self.writing_dice_time_zone).expect("Invalid timezone")
     }
 }
 
@@ -130,12 +143,23 @@ async fn main() {
         .framework(framework)
         .await
         .expect("Err creating client");
+    let http_client = ariel::TaskCacheHttp::new(client.http.clone(), client.cache.clone());
 
     let mut join_set = JoinSet::new();
     // Run the actual client
     join_set.spawn(async move { client.start().await });
     // Provide a means of stopping the bot without sending a kill signal
-    join_set.spawn(ariel::repl::run_commands(db, args.phoenix_saga_user_id));
+    join_set.spawn(ariel::repl::run_commands(
+        db.clone(),
+        args.phoenix_saga_user_id,
+    ));
+    join_set.spawn(ariel::tasks::writing_dice_threads(
+        db,
+        http_client,
+        args.get_writing_dice_channel_id(),
+        NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+        args.get_writing_dice_time_zone(),
+    ));
     join_set
         .join_next()
         .await

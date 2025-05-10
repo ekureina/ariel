@@ -21,9 +21,12 @@ use sea_orm::{
     QuerySelect, TransactionTrait,
 };
 
+use rand::seq::IndexedRandom;
+
 use crate::{
     ArielError, ArielPoiseContext,
     entities::{fandoms, fic_platforms, fics, fics_fandoms, prelude::*, urls, users},
+    tasks::WritingPrompt,
 };
 
 /// Helper method to translate a platform name into an id and emoji
@@ -185,6 +188,72 @@ pub(crate) async fn get_or_create_fandom<C: ConnectionTrait>(
         };
         Fandoms::insert(model).exec_with_returning(db).await
     }
+}
+
+/// Queries the database to determine a writing prompt
+pub(crate) async fn get_writing_prompt(db: &DatabaseConnection) -> Result<WritingPrompt, DbErr> {
+    let writing_prompt_data = WritingPrompts::find().all(db).await?.into_iter().fold(
+        HashMap::<String, Vec<String>>::new(),
+        |mut map, prompt| {
+            map.entry(prompt.r#type)
+                .and_modify(|values| values.push(prompt.value.clone()))
+                .or_insert_with(|| vec![prompt.value.clone()]);
+            map
+        },
+    );
+
+    // TODO: Potentially do this as a DB query (table is small, so it's okay here)
+    let mut rng = rand::rng();
+    let pov = writing_prompt_data
+        .get("pov")
+        .and_then(|values| values.choose(&mut rng))
+        .cloned()
+        .unwrap_or_default();
+    let conflict = writing_prompt_data
+        .get("conflict")
+        .and_then(|values| values.choose(&mut rng))
+        .cloned()
+        .unwrap_or_default();
+    let time = writing_prompt_data
+        .get("time")
+        .and_then(|values| values.choose(&mut rng))
+        .cloned()
+        .unwrap_or_default();
+    let theme = writing_prompt_data
+        .get("theme")
+        .and_then(|values| values.choose(&mut rng))
+        .cloned()
+        .unwrap_or_default();
+    let place = writing_prompt_data
+        .get("place")
+        .and_then(|values| values.choose(&mut rng))
+        .cloned()
+        .unwrap_or_default();
+    let character_identity = writing_prompt_data
+        .get("character_identity")
+        .and_then(|values| values.choose(&mut rng))
+        .cloned()
+        .unwrap_or_default();
+    let character_trait = writing_prompt_data
+        .get("character_trait")
+        .and_then(|values| values.choose(&mut rng))
+        .cloned()
+        .unwrap_or_default();
+    let character_background = writing_prompt_data
+        .get("character_background")
+        .and_then(|values| values.choose(&mut rng))
+        .cloned()
+        .unwrap_or_default();
+    Ok(WritingPrompt {
+        pov,
+        conflict,
+        time,
+        theme,
+        place,
+        character_identity,
+        character_trait,
+        character_background,
+    })
 }
 
 /// Autocompletes the list of platforms ariel knows about
