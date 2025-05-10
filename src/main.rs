@@ -16,7 +16,7 @@ limitations under the License.
 
 use std::sync::Arc;
 
-use ariel::{PoiseData, migrator::Migrator};
+use ariel::{ArielData, migrator::Migrator};
 use clap::Parser;
 
 use poise::serenity_prelude::{self as serenity, RoleId, UserId};
@@ -95,7 +95,7 @@ async fn main() {
     let intents = serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::DIRECT_MESSAGES
         | serenity::GatewayIntents::MESSAGE_CONTENT;
-    let data = PoiseData::new(
+    let data = ArielData::new(
         args.get_phoenix_author_id(),
         args.get_ariel_admin_group_id(),
         Arc::clone(&db),

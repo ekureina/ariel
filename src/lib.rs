@@ -30,20 +30,20 @@ pub mod tasks;
 
 /// Data held by the bot over its lifetime
 #[derive(Debug, Clone)]
-pub struct PoiseData {
+pub struct ArielData {
     pub(crate) phoenix_author_id: UserId,
     pub(crate) admin_role_id: RoleId,
     pub(crate) database_connection: Arc<DatabaseConnection>,
 }
 
-impl PoiseData {
+impl ArielData {
     #[must_use]
     pub fn new(
         phoenix_author_id: UserId,
         admin_role_id: RoleId,
         database_connection: impl Into<Arc<DatabaseConnection>>,
     ) -> Self {
-        PoiseData {
+        ArielData {
             phoenix_author_id,
             admin_role_id,
             database_connection: database_connection.into(),
@@ -60,7 +60,7 @@ pub enum ArielError {
     #[error("Error connecting to Discord: {0}")]
     SerenityError(#[from] poise::serenity_prelude::prelude::SerenityError),
 }
-type ArielPoiseContext<'a> = poise::Context<'a, PoiseData, ArielError>;
+type ArielPoiseContext<'a> = poise::Context<'a, ArielData, ArielError>;
 
 /// Ping Ariel, and optionally echo the arguments
 #[poise::command(prefix_command)]
@@ -158,7 +158,7 @@ pub async fn register(ctx: ArielPoiseContext<'_>) -> Result<(), ArielError> {
     Ok(())
 }
 
-pub fn on_error(error: &poise::FrameworkError<'_, PoiseData, ArielError>) {
+pub fn on_error(error: &poise::FrameworkError<'_, ArielData, ArielError>) {
     error!("Error: {}", error);
 }
 
