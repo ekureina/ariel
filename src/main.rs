@@ -33,20 +33,32 @@ struct ArielArgs {
     pub discord_token: String,
     /// The URL to the connected SQL Database.
     /// MSQL, POSTGRES, and `SQLite` are all supported
-    #[arg(long, default_value = "sqlite::memory:")]
-    pub sql_url: String,
+    #[arg(long, env, default_value = "sqlite::memory:")]
+    pub database_url: String,
     /// The Role Id of a special Guild Role with Admin Permissions
     #[arg(short, long, env)]
     pub admin_role_id: RoleId,
     /// The Discord User Id of the Author of The Phoenix Saga
     #[arg(long, env)]
     pub phoenix_saga_user_id: UserId,
+    /// The Channel Id to post Writing Prompts to
     #[arg(long, env)]
     pub writing_dice_channel_id: ChannelId,
+    /// The Timezone in which to post writing prompts
     #[arg(long, env, default_value_t = chrono_tz::Tz::America__Los_Angeles)]
     pub writing_dice_time_zone: chrono_tz::Tz,
+    /// The Time each day at which to post writing prompts
     #[arg(long, env, default_value_t = chrono::NaiveTime::from_hms_opt(9, 0, 0).unwrap())]
     pub writing_dice_time: chrono::NaiveTime,
+    /// The channel in which to post love spams
+    #[arg(long, env)]
+    pub love_spam_channel_id: ChannelId,
+    /// The role users must have to get a love spam
+    #[arg(long, env)]
+    pub love_spam_role_id: RoleId,
+    /// The Time, in the love spammee's timezone, at which to initiate a timezone
+    #[arg(long,env, default_value_t = chrono::NaiveTime::from_hms_opt(9, 0, 0).unwrap())]
+    pub love_spam_time: chrono::NaiveTime,
 }
 
 #[tokio::main]
@@ -58,7 +70,7 @@ async fn main() {
 
     let args = ArielArgs::parse();
     let db = Arc::new(
-        Database::connect(&args.sql_url)
+        Database::connect(&args.database_url)
             .await
             .expect("Unable to connect to database"),
     );
