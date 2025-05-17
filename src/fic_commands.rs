@@ -1,5 +1,4 @@
 use poise::serenity_prelude::Emoji;
-use rand::seq::IndexedRandom;
 /*
 Copyright 2025 ekureina
 
@@ -22,7 +21,9 @@ use crate::{
     entities::{fandoms, fics, prelude::*, urls},
     sql,
 };
-use sea_orm::{EntityTrait, QueryFilter, prelude::*};
+use sea_orm::{
+    EntityTrait, FromQueryResult, QueryFilter, QuerySelect, QueryTrait, prelude::*, sea_query::Func,
+};
 
 #[poise::command(prefix_command, slash_command)]
 #[instrument(skip(ctx))]
@@ -122,12 +123,17 @@ pub async fn fic(
 pub async fn random_fic(
     ctx: ArielPoiseContext<'_>,
     #[description = "Fandom of fic, if any. Will include crossovers into this fandom. Default will search all fandoms."]
-    #[autocomplete = "crate::sql::get_fandom_autocomplete"]
+    #[autocomplete = "crate::sql::get_single_fandom_autocomplete"]
     fandom: Option<String>,
     #[description = "Name of the platform to link to, defaults to AO3"]
     #[autocomplete = "crate::sql::get_platform_autocomplete"]
     platform: Option<String>,
 ) -> Result<(), ArielError> {
+    #[derive(sea_orm::FromQueryResult, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+    struct FicUrl {
+        url: String,
+    }
+
     let db = &*ctx.data().database_connection;
     let platform = platform.unwrap_or_else(|| String::from("Archive of Our Own"));
     let Some((platform_id, platform_emoji)) =
@@ -137,10 +143,6 @@ pub async fn random_fic(
         return Ok(());
     };
 
-    let fandom_filter = match fandom {
-        Some(fandom) => fandoms::Column::Name.eq(fandom),
-        None => fandoms::Column::Name.is_not_null(),
-    };
     let emoji = match platform_emoji {
         Some(emoji_name) => ctx
             .partial_guild()
@@ -156,30 +158,33 @@ pub async fn random_fic(
     };
     let emoji_header = emoji.map(|emoji| format!("{emoji}: ")).unwrap_or_default();
 
-    let fics = Fics::find()
+    let random_fic_query = Fics::find()
         .find_also_related(Fandoms)
         .find_also_related(Urls)
+        .select_only()
+        .column(urls::Column::Url)
         .filter(urls::Column::PlatformId.eq(platform_id))
         .filter(fics::Column::PhoenixSongBook.is_null())
         .filter(fics::Column::PhoenixSongChapter.is_null())
-        .filter(fandom_filter)
-        .all(db)
+        // Filter fandom if provided
+        .apply_if(fandom, |query, fandom_name| {
+            query.filter(fandoms::Column::Name.eq(fandom_name))
+        })
+        .into_query()
+        .order_by_expr(Func::random().into(), sea_orm::Order::Asc)
+        .limit(1)
+        .to_owned();
+
+    let fic_url = FicUrl::find_by_statement(db.get_database_backend().build(&random_fic_query))
+        .one(db)
         .await
         .unwrap_or_default();
-    if fics.is_empty() {
+    if let Some(fic_url) = fic_url {
+        info!("Picked fic: {fic_url:?}");
+        ctx.reply(emoji_header + &fic_url.url).await?;
+    } else {
         ctx.reply(emoji_header + "No songs meet that criteria!")
             .await?;
-    } else {
-        let picked_fic = {
-            let mut rng = rand::rng();
-            fics.choose(&mut rng)
-        };
-        info!("Picked fic: {picked_fic:?}");
-        if let Some((_, Some(_), Some(url))) = picked_fic {
-            ctx.reply(emoji_header + &url.url).await?;
-        } else {
-            ctx.reply("Unable to find a matching fic").await?;
-        }
     }
     Ok(())
 }

@@ -1,6 +1,9 @@
 use poise::serenity_prelude::Emoji;
-use rand::seq::IndexedRandom;
-use sea_orm::{EntityTrait, QueryFilter, prelude::*, sea_query::Condition};
+use sea_orm::{
+    EntityTrait, FromQueryResult, QueryFilter, QuerySelect, QueryTrait,
+    prelude::*,
+    sea_query::{Condition, Func},
+};
 use tracing::{info, instrument};
 
 use crate::{
@@ -140,9 +143,15 @@ pub async fn random_song(
     if let Some((platform_id, platform_emoji)) =
         sql::get_fic_platform_id_and_emoji_name_from_name(&platform, db).await?
     {
-        // Grab all fics we could consider
-        let valid_fics = Fics::find()
+        #[derive(sea_orm::FromQueryResult, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+        struct FicUrl {
+            url: String,
+        }
+
+        let random_song_query = Fics::find()
             .find_also_related(Urls)
+            .select_only()
+            .column(urls::Column::Url)
             .filter(urls::Column::PlatformId.eq(platform_id))
             // Is a Phoenix song
             .filter(fics::Column::PhoenixSongBook.is_not_null())
@@ -158,8 +167,16 @@ pub async fn random_song(
                     )
                     .add(fics::Column::PhoenixSongBook.lt(max_book)),
             )
-            .all(db)
-            .await?;
+            .into_query()
+            .order_by_expr(Func::random().into(), sea_orm::Order::Asc)
+            .limit(1)
+            .to_owned();
+
+        let song_url =
+            FicUrl::find_by_statement(db.get_database_backend().build(&random_song_query))
+                .one(db)
+                .await
+                .unwrap_or_default();
         let emoji = match platform_emoji {
             Some(emoji_name) => ctx
                 .partial_guild()
@@ -174,19 +191,12 @@ pub async fn random_song(
             None => None,
         };
         let emoji_header = emoji.map(|emoji| format!("{emoji}: ")).unwrap_or_default();
-        if valid_fics.is_empty() {
+        if let Some(song_url) = song_url {
+            info!("Picked fic: {song_url:?}");
+            ctx.reply(emoji_header + &song_url.url).await?;
+        } else {
             ctx.reply(emoji_header + "No songs meet that criteria!")
                 .await?;
-        } else {
-            // Expire `rng` so it isn't held across `await`
-            let picked_fic = {
-                let mut rng = rand::rng();
-                valid_fics.choose(&mut rng)
-            };
-            info!("Picked fic: {picked_fic:?}");
-            if let Some((_, Some(url))) = picked_fic {
-                ctx.reply(emoji_header + &url.url).await?;
-            }
         }
     } else {
         ctx.reply("Unknown Fic Platform, could not not find song")

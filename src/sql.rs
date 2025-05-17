@@ -34,11 +34,14 @@ pub(crate) async fn get_fic_platform_id_and_emoji_name_from_name(
     name: &str,
     db: &DatabaseConnection,
 ) -> Result<Option<(i32, Option<String>)>, DbErr> {
-    Ok(FicPlatforms::find()
+    FicPlatforms::find()
+        .select_only()
+        .column(fic_platforms::Column::Id)
+        .column(fic_platforms::Column::Emoji)
         .filter(fic_platforms::Column::Name.eq(name))
+        .into_tuple()
         .one(db)
-        .await?
-        .map(|platform| (platform.id, platform.emoji)))
+        .await
 }
 
 /// Gets Data on the `User` with the given Discord User Id
@@ -340,6 +343,23 @@ pub(crate) async fn get_song_autocomplete(
             fic,
         )
     })
+}
+
+/// Autocompletes when there is only one fandom usable, based on the fandoms provided
+pub(crate) async fn get_single_fandom_autocomplete(
+    poise_ctx: ArielPoiseContext<'_>,
+    partial: &str,
+) -> Vec<String> {
+    let db = &*poise_ctx.data().database_connection;
+    let partial_owned = partial.to_owned();
+    Fandoms::find()
+        .select_only()
+        .column(fandoms::Column::Name)
+        .filter(fandoms::Column::Name.starts_with(partial_owned))
+        .into_tuple::<String>()
+        .all(db)
+        .await
+        .unwrap_or_default()
 }
 
 /// Autocompletes the list of fandoms ariel knows about
