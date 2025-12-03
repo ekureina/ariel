@@ -19,7 +19,7 @@ use std::sync::Arc;
 use ariel::{ArielData, migrator::Migrator};
 use clap::Parser;
 
-use poise::serenity_prelude::{self as serenity, ChannelId, RoleId, UserId};
+use poise::serenity_prelude::{self as serenity, ChannelId, GuildId, RoleId, UserId};
 
 use sea_orm::Database;
 use sea_orm_migration::MigratorTrait;
@@ -35,6 +35,8 @@ struct ArielArgs {
     /// MSQL, POSTGRES, and `SQLite` are all supported
     #[arg(long, env, default_value = "sqlite::memory:")]
     pub database_url: String,
+    /// The Guild Id on which to run Ariel (Ariel is a Single-Guild Bot)
+    pub guild_id: GuildId,
     /// The Role Id of a special Guild Role with Admin Permissions
     #[arg(short, long, env)]
     pub admin_role_id: RoleId,
@@ -56,6 +58,8 @@ struct ArielArgs {
     /// The role users must have to get a love spam
     #[arg(long, env)]
     pub love_spam_role_id: RoleId,
+    /// The role to ping for a love spam
+    pub love_spammers_role_id: RoleId,
     /// The Time, in the love spammee's timezone, at which to initiate a timezone
     #[arg(long,env, default_value_t = chrono::NaiveTime::from_hms_opt(9, 0, 0).unwrap())]
     pub love_spam_time: chrono::NaiveTime,
