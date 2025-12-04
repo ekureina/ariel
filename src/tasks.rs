@@ -129,11 +129,11 @@ pub async fn love_spam_threads<CH: CacheHttp + Clone + 'static>(
             continue;
         }
 
-        let (users, is_birthday) = next_love_spam(spammable_members).await;
+        let (users, is_birthday) = next_love_spam(&spammable_members);
         for user in users {
             let tomorrow = Local::now().checked_add_days(Days::new(1)).unwrap();
             let thread_creation_instant = match user.time_zone.as_ref() {
-                Some(time_zone) => chrono_tz::Tz::from_str_insensitive(&time_zone)
+                Some(time_zone) => chrono_tz::Tz::from_str_insensitive(time_zone)
                     .expect("Checked on entry to database")
                     .with_ymd_and_hms(tomorrow.year(), tomorrow.month(), tomorrow.day(), 12, 0, 0)
                     .earliest()
@@ -188,53 +188,48 @@ pub async fn love_spam_threads<CH: CacheHttp + Clone + 'static>(
     }
 }
 
-async fn next_love_spam(spammable_members: Vec<users::Model>) -> (Vec<users::Model>, bool) {
+fn next_love_spam(spammable_members: &[users::Model]) -> (Vec<users::Model>, bool) {
     let mut rng = rand::rng();
     let tomorrow = Local::now().checked_add_days(Days::new(1)).unwrap();
     let mut birthday_users = vec![];
-    for spammable_member in &spammable_members {
-        match (
+    for spammable_member in spammable_members {
+        if let (Some(month), Some(day), Some(time_zone)) = (
             spammable_member.birthday_month,
             spammable_member.birthday_day,
             spammable_member.time_zone.as_ref(),
         ) {
-            (Some(month), Some(day), Some(time_zone)) => {
-                let tz = chrono_tz::Tz::from_str_insensitive(&time_zone)
-                    .expect("Checked on entry to database");
-                let year_offset: u32 =
-                    u32::try_from(tomorrow.year()).expect("Should be a year after 2024") - 2024;
-                let birthday_this_year = tz
-                    .with_ymd_and_hms(
-                        2024,
-                        month
-                            .try_into()
-                            .expect("Checked when entered into database"),
-                        day.try_into().expect("Checked when input into database"),
-                        12,
-                        0,
-                        0,
-                    )
-                    .map(|birthday| {
-                        birthday
-                            .checked_add_months(Months::new(year_offset * 12))
-                            .expect("Adding years okay")
-                            // Convert to the current time zone
-                            .with_timezone(&tomorrow.timezone())
-                    })
-                    .earliest()
-                    .expect("Should not be in a gap in time");
-                if birthday_this_year.month() == tomorrow.month()
-                    && birthday_this_year.day() == tomorrow.day()
-                {
-                    birthday_users.push(spammable_member.clone())
-                }
+            let tz = chrono_tz::Tz::from_str_insensitive(time_zone)
+                .expect("Checked on entry to database");
+            let year_offset: u32 =
+                u32::try_from(tomorrow.year()).expect("Should be a year after 2024") - 2024;
+            let birthday_this_year = tz
+                .with_ymd_and_hms(
+                    2024,
+                    month
+                        .try_into()
+                        .expect("Checked when entered into database"),
+                    day.try_into().expect("Checked when input into database"),
+                    12,
+                    0,
+                    0,
+                )
+                .map(|birthday| {
+                    birthday
+                        .checked_add_months(Months::new(year_offset * 12))
+                        .expect("Adding years okay")
+                        // Convert to the current time zone
+                        .with_timezone(&tomorrow.timezone())
+                })
+                .earliest()
+                .expect("Should not be in a gap in time");
+            if birthday_this_year.month() == tomorrow.month()
+                && birthday_this_year.day() == tomorrow.day()
+            {
+                birthday_users.push(spammable_member.clone());
             }
-            _ => {}
         }
     }
-    if !birthday_users.is_empty() {
-        (birthday_users, true)
-    } else {
+    if birthday_users.is_empty() {
         (
             vec![
                 spammable_members
@@ -244,5 +239,7 @@ async fn next_love_spam(spammable_members: Vec<users::Model>) -> (Vec<users::Mod
             ],
             false,
         )
+    } else {
+        (birthday_users, true)
     }
 }
